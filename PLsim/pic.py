@@ -104,29 +104,6 @@ class TriCoupler(BaseComponent):
 
         super().__init__(name, input_names, output_names, transfer_matrix)
 
-class PortRemover(BaseComponent):
-    """Component that removes specific ports by matrix operation"""
-    
-    def __init__(self, name, input_names, output_names, custom_matrix=None):
-        
-        if custom_matrix is not None:
-            transfer_matrix = custom_matrix
-        else:
-            # Create a transfer matrix that maps inputs to outputs
-            # This is essentially a selection matrix that removes unwanted ports
-            n_inputs = len(input_names)
-            n_outputs = len(output_names)
-            
-            transfer_matrix = np.zeros((n_inputs, n_outputs), dtype=complex)
-            
-            # Map each output to its corresponding input
-            for j, output_name in enumerate(output_names):
-                if output_name in input_names:
-                    i = input_names.index(output_name)
-                    transfer_matrix[i, j] = 1.0
-                    
-        super().__init__(name, input_names, output_names, transfer_matrix)
-
 class PortSelector(BaseComponent):
     """Component that selects only specific ports from input ports"""
     
@@ -150,7 +127,7 @@ class PortSelector(BaseComponent):
         super().__init__(name, input_names, selected_port_names, transfer_matrix)
 
 
-class Device(BaseComponent):
+class PIC(BaseComponent):
 
     def __init__(self, input_port_names, output_port_names=None, name="Device"):
         
@@ -312,6 +289,10 @@ class Device(BaseComponent):
         """Get list of all current port names"""
         return [p.name for p in self.all_ports]
     
+    def get_input_port_names(self):
+        """Get list of input port names only"""
+        return self.input_port_names.copy()
+    
     def remove_ports_by_selection(self, ports_to_keep, component_name=None):
         """
         Remove ports by selecting only the ports to keep using a PortSelector component.
@@ -392,16 +373,17 @@ class Device(BaseComponent):
                 ini_mat = np.dot(self.global_matrices[i], ini_mat)  # Reversed order
             return ini_mat
 
-class MZI(Device):
+class MZI(PIC):
     """Mach-Zehnder Interferometer as a nested device"""
     
-    def __init__(self, name, input_names, output_names, phase_shift=0):
+    def __init__(self, name, input_names, output_names, phase_shift=0,
+                 DC_custom_matrix1 = None, DC_custom_matrix2 = None):
         # Initialize as a Device with input and output ports
         super().__init__(input_names, output_names, name)
         
         # Build the MZI structure: DC -> PhaseShifter -> DC
         # First DC: splits inputs into two arms
-        dc1 = DC(f"{name}_dc1", input_names, input_names)
+        dc1 = DC(f"{name}_dc1", input_names, input_names, custom_matrix=DC_custom_matrix1)
         self.add_component(dc1)
         
         # Phase shifter on one arm (arm1)
@@ -409,7 +391,7 @@ class MZI(Device):
         self.add_component(ps)
         
         # Second DC: combines arms back to outputs
-        dc2 = DC(f"{name}_dc2", output_names, output_names)
+        dc2 = DC(f"{name}_dc2", output_names, output_names, custom_matrix=DC_custom_matrix2)
         self.add_component(dc2)
         
         # Extract the relevant part of the transfer matrix that maps inputs to outputs
@@ -423,7 +405,7 @@ class MZI(Device):
         # Extract the input->output submatrix
         self.transfer_matrix = total_matrix[np.ix_(output_indices_final, input_indices_final)]
 
-class ScalarMZI(Device):
+class ScalarMZI(PIC):
 
     """ Scalar MZI (intensity modulator) """
 
@@ -454,7 +436,7 @@ class ScalarMZI(Device):
         # Extract the input->output submatrix
         self.transfer_matrix = total_matrix[np.ix_(output_indices_final, input_indices_final)]
 
-class ABCD(Device):
+class ABCD(PIC):
 
     """ ABCD beam combiner"""
 
@@ -491,46 +473,171 @@ class ABCD(Device):
         # Extract the input->output submatrix
         self.transfer_matrix = total_matrix[np.ix_(output_indices_final, input_indices_final)]
 
-if __name__ == "__main__":
-    print("=== Testing Nested Devices (MZI) ===")
-    
-    # Create a main device
-    main_device = Device(['a', 'b'], name="MainDevice")
-    print("Initial main device ports:", [p.name for p in main_device.all_ports])
-    
-    # Create an MZI as a nested device
-    mzi = MZI('mzi1', ['a', 'b'], ['a', 'b'], phase_shift=np.pi/2)
-    print(f"\nMZI created with transfer matrix shape: {mzi.transfer_matrix.shape}")
-    print(f"MZI transfer matrix:\n{mzi.transfer_matrix}")
-    
-    # Add the MZI to the main device (treating MZI as a single component)
-    main_device.add_component(mzi)
-    
-    print(f"\nMain device after adding MZI:")
-    print(f"All ports: {[p.name for p in main_device.all_ports]}")
-    print(f"Total transfer matrix:\n{main_device.get_total_transfer_matrix()}")
-    
-    # print("\n=== Original Test Case ===")
-    # # Test case for your example: ports [0,1], Y-splitter splits 1 into [1,2]
-    # device = Device(['a', 'b'], name="TestDevice")  # Start with ports 0 and 1 (named 'a' and 'b')
-    # print("Initial ports:", [p.name for p in device.all_ports])
-    
-    dc = DC('dc1', ['a', 'b'], ['a', 'b'])
-    print(dc)
-    main_device.add_component(dc)
-    print(f"Total transfer matrix:\n{main_device.get_total_transfer_matrix()}")
-    if np.allclose(main_device.get_total_transfer_matrix().dot(main_device.get_total_transfer_matrix().conj().T), np.eye(main_device.get_total_transfer_matrix().shape[0])):
-        print("The total transfer matrix is unitary.")
-    else:
-        print("The total transfer matrix is not unitary.")
 
-    # y2 = Ysplitter('y2', ['b'], ['b','c'])
-    # device.add_component(y2)
+class ActivePIC(PIC):
+    """
+    PIC device with adjustable parameters that updates transfer matrix on-the-fly.
+    
+    This is a PIC subclass that rebuilds its internal structure when parameters change,
+    while maintaining the same interface as a regular PIC device.
+    """
+    
+    def __init__(self, device_template, parameter_names, initial_parameters=None, 
+                 input_port_names=None, output_port_names=None, name="Active PIC"):
+        """
+        Parameters:
+        -----------
+        device_template : function
+            Function that returns a PIC device given parameters
+            Example: lambda phase1=0, phase2=0: create_my_device(phase1, phase2)
+        parameter_names : list
+            Names of the adjustable parameters
+        initial_parameters : dict, optional
+            Initial parameter values. If None, all parameters start at 0.0
+        input_port_names : list, optional
+            Input port names. If None, inferred from template device
+        output_port_names : list, optional  
+            Output port names. If None, inferred from template device
+        name : str
+            Name of the active PIC device
+        """
+        self.device_template = device_template
+        self.parameter_names = parameter_names
+        
+        # Initialize parameter values
+        if initial_parameters is None:
+            self.parameters = {name: 0.0 for name in parameter_names}
+        else:
+            self.parameters = {name: 0.0 for name in parameter_names}
+            self.parameters.update(initial_parameters)
+        
+        # Cache for built devices to avoid rebuilding identical ones
+        self._device_cache = {}
+        self._current_built_device = None
+        
+        # Build initial device to get port structure
+        self._rebuild_device()
+        
+        # If port names not specified, infer from the template device
+        if input_port_names is None:
+            input_port_names = self._current_built_device.input_port_names
+        if output_port_names is None:
+            output_port_names = self._current_built_device.get_port_names()
+        
+        # Initialize as PIC
+        super().__init__(input_port_names, output_port_names, name)
+        
+        # Copy the structure from the built device
+        self._copy_structure_from_device()
+    
+    def _rebuild_device(self):
+        """Rebuild the internal device with current parameters."""
+        # Create cache key from current parameters
+        cache_key = tuple(self.parameters[key] for key in sorted(self.parameters.keys()))
+        
+        # Check cache first
+        if cache_key in self._device_cache:
+            self._current_built_device = self._device_cache[cache_key]
+        else:
+            # Build new device with current parameters
+            self._current_built_device = self.device_template(**self.parameters)
+            
+            # Cache the device
+            self._device_cache[cache_key] = self._current_built_device
+    
+    def _copy_structure_from_device(self):
+        """Copy the internal structure from the built device to this PIC."""
+        built_device = self._current_built_device
+        
+        # Clear current structure
+        self.components = []
+        self.global_matrices = []
+        
+        # Copy all ports
+        self.all_ports = [Port(p.name, p.index) for p in built_device.all_ports]
+        
+        # Copy components
+        self.components = built_device.components.copy()
+        
+        # Copy global matrices
+        self.global_matrices = [mat.copy() for mat in built_device.global_matrices]
+        
+        # Update transfer matrix
+        self.transfer_matrix = built_device.get_total_transfer_matrix()
+        
+        # Update port names
+        self.output_names = [p.name for p in self.all_ports]
+    
+    def update_parameters(self, **kwargs):
+        """
+        Update parameter values and rebuild device structure if needed.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Parameter values to update. Only known parameter names are accepted.
+        """
+        # Track if any parameters actually changed
+        changed = False
+        
+        # Update parameters
+        for key, value in kwargs.items():
+            if key in self.parameters:
+                if self.parameters[key] != value:
+                    self.parameters[key] = value
+                    changed = True
+            else:
+                raise ValueError(f"Unknown parameter: {key}. Known parameters: {list(self.parameters.keys())}")
+        
+        # Only rebuild if parameters actually changed
+        if changed:
+            self._rebuild_device()
+            self._copy_structure_from_device()
+    
+    def get_total_transfer_matrix(self, **kwargs):
+        """
+        Get total transfer matrix with optional parameter updates.
+        
+        Parameters:
+        -----------
+        **kwargs : dict
+            Optional parameter updates before getting transfer matrix
+            
+        Returns:
+        --------
+        transfer_matrix : ndarray
+            Current total transfer matrix
+        """
+        if kwargs:
+            self.update_parameters(**kwargs)
+        return super().get_total_transfer_matrix()
+    
+    def get_current_parameters(self):
+        """Get current parameter values."""
+        return self.parameters.copy()
+    
+    def get_current_built_device(self):
+        """Get the current built PIC device instance."""
+        return self._current_built_device
+    
+    def get_cache_size(self):
+        """Get number of cached devices."""
+        return len(self._device_cache)
+    
+    def clear_cache(self):
+        """Clear the device cache."""
+        self._device_cache = {}
+    
+    def get_device_info(self):
+        """Get information about the active PIC device."""
+        info = f"Active PIC: {self.name}\n"
+        info += f"Parameters: {self.parameters}\n"
+        info += f"Cache size: {len(self._device_cache)} devices\n"
+        info += f"Port names: {self.get_port_names()}\n"
+        info += f"Transfer matrix shape: {self.get_total_transfer_matrix().shape}\n"
+        
+        return info
+    
+    def __repr__(self):
+        return self.get_device_info()
 
-    # ps = PhaseShifter('ps1', ['c'], ['c'], phase_shift=np.pi)
-    # device.add_component(ps)
-
-    # print("=== After adding components ===")
-    # print("All ports after adding components:", [p.name for p in device.all_ports])
-    # print([np.shape(mat) for mat in device.global_matrices])
-    # print("Total transfer matrix:", device.get_total_transfer_matrix())
