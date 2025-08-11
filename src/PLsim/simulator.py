@@ -160,7 +160,7 @@ class OverlapCalculator:
         J = self.scene.J_point(ax, ay)
         return self.prop.full_ccpupils @ J
 
-    def compute_overlap_grid_x(self, xmax, ngrid):
+    def compute_overlap_grid_x(self, xmax, ngrid, xoffset = 0, yoffset = 0):
         """
         Compute the overlap grid for a given x-coordinate range and number of grid points.
 
@@ -176,13 +176,13 @@ class OverlapCalculator:
         ndarray
             Overlap grid for the given x-coordinate range and number of grid points.
         """
-        ax_grid = np.linspace(-xmax/2, xmax/2, ngrid)
-        ay = 0.0
+        ax_grid = np.linspace(-xmax/2, xmax/2, ngrid) + xoffset
+        ay = 0.0 + yoffset
         overlaps = [self.compute_overlap(ax, ay) for ax in ax_grid]
         overlaps = np.array(overlaps).reshape(ngrid, -1)
         return overlaps
-    
-    def compute_overlap_grid_y(self, ymax, ngrid):
+
+    def compute_overlap_grid_y(self, ymax, ngrid, xoffset = 0, yoffset = 0):
         """
         Compute the overlap grid for a given y-coordinate range and number of grid points.
 
@@ -198,13 +198,13 @@ class OverlapCalculator:
         ndarray
             Overlap grid for the given y-coordinate range and number of grid points.
         """
-        ax = 0.0
-        ay_grid = np.linspace(-ymax/2, ymax/2, ngrid)
+        ax = 0.0 + xoffset
+        ay_grid = np.linspace(-ymax/2, ymax/2, ngrid) + yoffset
         overlaps = [self.compute_overlap(ax, ay) for ay in ay_grid]
         overlaps = np.array(overlaps).reshape(ngrid, -1)
         return overlaps
     
-    def compute_overlap_grid_2d(self, fov, ngrid):
+    def compute_overlap_grid_2d(self, fov, ngrid, xoffset = 0, yoffset = 0):
         """
         Compute the overlap grid for a given field of view and number of grid points.
 
@@ -221,8 +221,8 @@ class OverlapCalculator:
             Overlap grid for the given field of view and number of grid points.
         """
 
-        ax_grid = np.linspace(-fov/2, fov/2, ngrid)
-        ay_grid = np.linspace(-fov/2, fov/2, ngrid)
+        ax_grid = np.linspace(-fov/2, fov/2, ngrid) + xoffset
+        ay_grid = np.linspace(-fov/2, fov/2, ngrid) + yoffset
 
         axs, ays = np.meshgrid(ax_grid, ay_grid)
 
