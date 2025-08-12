@@ -139,6 +139,7 @@ class OverlapCalculator:
     def __init__(self, dim = 385, telescope_diameter = 10, wavelength = 1.55e-6):
         
         self.scene = Scene.Scene(dim=dim, wavelength=wavelength, diameter=telescope_diameter)
+        self.overlap0 = self.compute_overlap(0, 0)
         
 
     def compute_overlap(self, ax, ay):
@@ -158,7 +159,7 @@ class OverlapCalculator:
             Overlap matrix for the given angular coordinates.
         """
         J = self.scene.J_point(ax, ay)
-        return self.prop.full_ccpupils @ J
+        return (self.prop.full_ccpupils @ J)
 
     def compute_overlap_grid_x(self, xmax, ngrid, xoffset = 0, yoffset = 0):
         """
@@ -242,7 +243,8 @@ class PLOverlapCalculator(OverlapCalculator):
 
     def __init__(self, dim = 385, telescope_diameter = 10, wavelength = 1.55e-6, focal_plane_resolution = 0.5e-6,
                  nclad = 1.444, njack = 1.444 - 5.5e-3, rclad = 10e-6,
-                 focal_length = None):
+                 focal_length = None,
+                 skip_pupil_bases_calc = False):
         """
         Initialize the PLOverlapCalculator with parameters for the lantern and scene.
 
@@ -275,8 +277,12 @@ class PLOverlapCalculator(OverlapCalculator):
             self.prop.adjust_focal_length(focal_length)
         else:
             self.prop.focal_length_optimization()
-        self.prop.calculate_pupil_bases()
-        self.prop.calculate_ccpupil_bases()
+        self.prop.compute_coupling_efficiency()
+        print("Coupling efficiency:", self.prop.efficiency)
+
+        if not skip_pupil_bases_calc:
+            self.prop.calculate_pupil_bases()
+            self.prop.calculate_ccpupil_bases()
 
         super().__init__(dim=dim, telescope_diameter=telescope_diameter, wavelength=wavelength)
     

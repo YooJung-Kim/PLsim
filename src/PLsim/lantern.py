@@ -124,6 +124,17 @@ class PLprop:
         self.propagator = hc.FraunhoferPropagator(self.pupil_grid, self.focal_grid, focal_length=new_focal_length)
         self.focal_length = new_focal_length
         self.wf_focal = self.propagator.forward(self.wf)
+    
+    def compute_coupling_efficiency(self):
+        _olPSF = overlap(self.wf_focal.electric_field, self.wf_focal.electric_field)
+            
+        eta = 0.0
+        for u0 in self.u0s:
+            nu = overlap(self.wf_focal.electric_field, u0)
+            eta += nu**2 / _olPSF
+
+        self.efficiency = eta
+        return eta
 
     def focal_length_optimization(self, initial_value = None):
         
@@ -136,13 +147,15 @@ class PLprop:
         def find_eta(focal_length):
 
             self.adjust_focal_length(focal_length)
-            _olPSF = overlap(self.wf_focal.electric_field, self.wf_focal.electric_field)
+            # _olPSF = overlap(self.wf_focal.electric_field, self.wf_focal.electric_field)
                 
-            eta = 0.0
-            for u0 in self.u0s:
-                nu = overlap(self.wf_focal.electric_field, u0)
-                eta += nu**2 / _olPSF
+            # eta = 0.0
+            # for u0 in self.u0s:
+            #     nu = overlap(self.wf_focal.electric_field, u0)
+            #     eta += nu**2 / _olPSF
 
+            # return -eta
+            eta = self.compute_coupling_efficiency()
             return -eta
     
         out = minimize(find_eta, self.focal_length, method='Nelder-Mead')
@@ -244,6 +257,203 @@ def generate_unitary_matrix_near_identity(dim=3, epsilon=0.1):
     
     return U
 
+def generate_hybrid_unitary_matrix_near_identity(dim=3, theta=0.1):
+    """
+    Generates a special N x N unitary matrix using the Householder reflection method.
+
+    The matrix U is constructed such that its first column has a specific structure
+    determined by the parameter theta, making U[0,0] close to 1 for small theta.
+
+    Args:
+        N (int): The dimension of the square matrix.
+        theta (float): The control parameter in radians. When theta is small,
+                       the (0,0) element of the matrix is close to 1.
+
+    Returns:
+        numpy.ndarray: An N x N complex unitary matrix.
+    """
+    if dim < 1:
+        raise ValueError("Matrix size N must be at least 1.")
+    if dim == 1:
+        return np.array([[1+0j]])
+    
+    # If theta is very close to 0, U is the identity matrix.
+    if np.isclose(theta, 0):
+        return np.identity(dim, dtype=np.complex128)
+    
+    # 1. Generate a random (N-1)-dimensional complex unit vector u_sub
+    # We generate a random vector and then normalize it.
+    random_sub_vec = np.random.randn(dim - 1) + 1j * np.random.randn(dim - 1)
+    u_sub = random_sub_vec / np.linalg.norm(random_sub_vec)
+
+    # 2. Define the target first column 'c' of our matrix
+    # The first element is cos(theta), and the rest are sin(theta) * u_sub
+    c_vec = np.zeros(dim, dtype=np.complex128)
+    c_vec[0] = np.cos(theta)
+    c_vec[1:] = np.sin(theta) * u_sub
+
+    # 3. Define the Householder vector w = e_0 - c, where e_0 = [1, 0, ...]
+    e0 = np.zeros(dim, dtype=np.complex128)
+    e0[0] = 1.0
+    w_vec = e0 - c_vec
+    
+    # Normalize the Householder vector w
+    w_norm = np.linalg.norm(w_vec)
+    w_unit = w_vec / w_norm
+    
+    # 4. Calculate the Householder matrix H = I - 2 * w * w_dagger
+    # Using the outer product for w * w_dagger
+    w_outer = np.outer(w_unit, w_unit.conj())
+    H = np.identity(dim, dtype=np.complex128) - 2 * w_outer
+
+    # 5. To make the matrix general (non-Hermitian), right-multiply by a 
+    # random diagonal phase matrix P. The resulting matrix U = H @ P is unitary.
+    # We set P[0,0]=1 to ensure the first column of U is the same as H's first column.
+    random_angles = np.random.uniform(0, 2 * np.pi, dim)
+    random_angles[0] = 0 # Ensure P[0,0] is 1
+    P = np.diag(np.exp(1j * random_angles))
+
+    # The final unitary matrix
+    U = H @ P
+    
+    return U
+
+def generate_unitary_matrix_near_identity_LP01mixing(N=3, theta=0.1):
+    """
+    Generates a special N x N unitary matrix that is near-identity.
+
+    The matrix is constructed such that the perturbation from the identity
+    matrix is primarily controlled by couplings between the 0-th state and
+    all other states. This is achieved by constructing a matrix U of the form:
+    U = exp(i * theta * H)
+    where H is a Hermitian matrix with non-zero off-diagonal elements only
+    in the first row and column.
+
+    Args:
+        N (int): The dimension of the square matrix.
+        theta (float): The perturbation parameter in radians. For theta=0,
+                       the matrix is the identity matrix.
+
+    Returns:
+        numpy.ndarray: An N x N complex unitary matrix.
+    """
+    if N < 1:
+        raise ValueError("Matrix size N must be at least 1.")
+    if N == 1:
+        return np.array([[1+0j]])
+
+    # If theta is very close to 0, U is the identity matrix.
+    if np.isclose(theta, 0):
+        return np.identity(N, dtype=np.complex128)
+
+    # 1. Generate a random (N-1)-dimensional complex unit vector 'u'.
+    # This vector defines the direction of the perturbation in the subspace.
+    random_sub_vec = np.random.randn(N - 1) + 1j * np.random.randn(N - 1)
+    u_vec = random_sub_vec / np.linalg.norm(random_sub_vec)
+    
+    # Reshape u_vec to be a column vector for the outer product
+    u_vec = u_vec.reshape((N - 1, 1))
+
+    # 2. Construct the matrix U using the derived formula which is mathematically
+    # equivalent to exponentiating a sparse Hermitian matrix.
+    # U = [[cos(t), i*sin(t)*u_dag], [i*sin(t)*u, I + (cos(t)-1)*u*u_dag]]
+    
+    U = np.identity(N, dtype=np.complex128)
+    
+    c = np.cos(theta)
+    s = np.sin(theta)
+
+    # Top-left element
+    U[0, 0] = c
+
+    # First row (0, 1:) and first column (1:, 0)
+    U[0, 1:] = 1j * s * u_vec.conj().T
+    U[1:, 0] = 1j * s * u_vec.flatten()
+
+    # Bottom-right (N-1)x(N-1) submatrix
+    # The term u_vec @ u_vec.conj().T is an outer product.
+    u_outer_u_dag = u_vec @ u_vec.conj().T
+    sub_matrix = np.identity(N - 1, dtype=np.complex128) + (c - 1) * u_outer_u_dag
+    U[1:, 1:] = sub_matrix
+    
+    return U
+
+def generate_unitary_matrix_near_identity_LP01mixing_twoparams(N, theta, phi):
+    """
+    Generates a special N x N unitary matrix with two perturbation parameters.
+
+    The matrix is constructed by composing two unitary transformations:
+    U = U_theta @ U_phi
+    - U_theta controls the coupling between the 0-th state and the rest.
+    - U_phi introduces a perturbation within the subspace of the other states.
+
+    Args:
+        N (int): The dimension of the square matrix.
+        theta (float): The primary perturbation parameter, controlling the
+                       (0,x) and (x,0) off-diagonal elements.
+        phi (float): The secondary perturbation parameter, controlling how much
+                     the [1:, 1:] submatrix deviates from the identity matrix.
+
+    Returns:
+        numpy.ndarray: An N x N complex unitary matrix.
+    """
+    if N < 1:
+        raise ValueError("Matrix size N must be at least 1.")
+
+    # --- 1. Construct U_theta for the primary coupling (state 0 to rest) ---
+    U_theta = np.identity(N, dtype=np.complex128)
+    if not np.isclose(theta, 0) and N > 1:
+        # Generate a random (N-1)-dim complex unit vector for the coupling direction
+        random_vec_1 = np.random.randn(N - 1) + 1j * np.random.randn(N - 1)
+        u_vec_1 = random_vec_1 / np.linalg.norm(random_vec_1)
+        u_vec_1 = u_vec_1.reshape((N - 1, 1))
+
+        c_t, s_t = np.cos(theta), np.sin(theta)
+        U_theta[0, 0] = c_t
+        U_theta[0, 1:] = 1j * s_t * u_vec_1.conj().T
+        U_theta[1:, 0] = 1j * s_t * u_vec_1.flatten()
+        U_theta[1:, 1:] = np.identity(N - 1) + (c_t - 1) * (u_vec_1 @ u_vec_1.conj().T)
+
+    # --- 2. Construct U_phi for the internal subspace perturbation ---
+    U_phi = np.identity(N, dtype=np.complex128)
+    # This perturbation only applies if the subspace has dimension > 0 (i.e., N > 1)
+    if not np.isclose(phi, 0) and N > 1:
+        dim_sub = N - 1
+        
+        # A) Create a base near-identity unitary matrix for the subspace.
+        # This matrix has a fixed perturbation structure.
+        base_U_sub = np.identity(dim_sub, dtype=np.complex128)
+        if dim_sub > 1:
+            random_vec_2 = np.random.randn(dim_sub - 1) + 1j * np.random.randn(dim_sub - 1)
+            u_vec_2 = random_vec_2 / np.linalg.norm(random_vec_2)
+            u_vec_2 = u_vec_2.reshape((dim_sub - 1, 1))
+            
+            c_p, s_p = np.cos(phi), np.sin(phi)
+            base_U_sub[0, 0] = c_p
+            base_U_sub[0, 1:] = 1j * s_p * u_vec_2.conj().T
+            base_U_sub[1:, 0] = 1j * s_p * u_vec_2.flatten()
+            base_U_sub[1:, 1:] = np.identity(dim_sub - 1) + (c_p - 1) * (u_vec_2 @ u_vec_2.conj().T)
+        else: # Handle N=2 case where the sub-matrix is 1x1
+            base_U_sub[0,0] = np.exp(1j * phi)
+
+
+        # B) Create a random unitary matrix R to randomize the perturbation basis.
+        # We get this from the Q factor of a QR decomposition of a random matrix.
+        random_matrix = np.random.randn(dim_sub, dim_sub) + 1j * np.random.randn(dim_sub, dim_sub)
+        R, _ = np.linalg.qr(random_matrix)
+
+        # C) Conjugate the base matrix by R to get a randomized near-identity unitary.
+        # This ensures the perturbation isn't always anchored to the same element.
+        randomized_U_sub = R @ base_U_sub @ R.conj().T
+        
+        # D) Embed the randomized sub-matrix into the full U_phi matrix.
+        U_phi[1:, 1:] = randomized_U_sub
+
+    # --- 3. Combine the transformations ---
+    # The final matrix is the product of the two unitary matrices.
+    U = U_theta @ U_phi
+    
+    return U
 
 def make_circular_aperture(xp, yp, radius, xa0):
     '''
