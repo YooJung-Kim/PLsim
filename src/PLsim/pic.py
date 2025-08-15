@@ -91,13 +91,13 @@ class PhaseShifter(BaseComponent):
 
 class TriCoupler(BaseComponent):
 
-    def __init__(self, name, input_names, output_names, custom_matrix=None):
+    def __init__(self, name, input_names, output_names, custom_matrix=None, custom_phase = 2*np.pi/3):
         
         if custom_matrix is not None:
             transfer_matrix = custom_matrix
         else:
             # Default transfer matrix for Tri-Coupler
-            phase = 2*np.pi/3
+            phase = custom_phase
             transfer_matrix = (1/np.sqrt(3)) * np.array([[1, np.exp(1j * phase), np.exp(1j * phase)],
                                                          [np.exp(1j * phase), 1, np.exp(1j * phase)],
                                                          [np.exp(1j * phase), np.exp(1j * phase), 1]], dtype=complex)
