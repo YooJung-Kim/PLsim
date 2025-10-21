@@ -129,7 +129,7 @@ class Device:
                 intens = np.abs(np.array([np.diag(mutual_intens) for mutual_intens in mutual_intens]))
 
                 spectra.append(intens)
-            spectra = np.array(spectra).reshape(len(self.wavelengths), *overlaps.shape[:2], -1)
+            spectra = np.array(spectra) #.reshape(len(self.wavelengths), *overlaps.shape[:2], -1)
 
             return spectra
         
@@ -177,7 +177,7 @@ class OverlapCalculator:
         ndarray
             Overlap grid for the given x-coordinate range and number of grid points.
         """
-        ax_grid = np.linspace(-xmax/2, xmax/2, ngrid) + xoffset
+        ax_grid = np.linspace(-xmax, xmax, ngrid) + xoffset
         ay = 0.0 + yoffset
         overlaps = [self.compute_overlap(ax, ay) for ax in ax_grid]
         overlaps = np.array(overlaps).reshape(ngrid, -1)
@@ -200,7 +200,7 @@ class OverlapCalculator:
             Overlap grid for the given y-coordinate range and number of grid points.
         """
         ax = 0.0 + xoffset
-        ay_grid = np.linspace(-ymax/2, ymax/2, ngrid) + yoffset
+        ay_grid = np.linspace(-ymax, ymax, ngrid) + yoffset
         overlaps = [self.compute_overlap(ax, ay) for ay in ay_grid]
         overlaps = np.array(overlaps).reshape(ngrid, -1)
         return overlaps
@@ -235,6 +235,11 @@ class OverlapCalculator:
         self.overlaps = overlaps
 
         return overlaps
+    
+    def compute_overlap_disk(self, radius, ellip=1):
+        J = self.scene.J_disk(radius, ellip)
+        return (self.prop.full_ccpupils @ J)
+    
 
 
 
@@ -283,9 +288,22 @@ class PLOverlapCalculator(OverlapCalculator):
         if not skip_pupil_bases_calc:
             self.prop.calculate_pupil_bases()
             self.prop.calculate_ccpupil_bases()
+            self.prop.unaberrated_u0s_pupil = self.prop.u0s_pupil.copy()
+            self.prop.unaberrated_full_ccpupils = self.prop.full_ccpupils.copy()
 
         super().__init__(dim=dim, telescope_diameter=telescope_diameter, wavelength=wavelength)
+
+
+    def aberrate(self, phase_screen):
+
+        self.prop.u0s_pupil = np.array([self.prop.unaberrated_u0s_pupil[i] * np.exp(1j * phase_screen) for i in range(len(self.prop.unaberrated_u0s_pupil))])
+        self.prop.calculate_ccpupil_bases()
     
+    def unaberrate(self):
+        self.prop.u0s_pupil = self.prop.unaberrated_u0s_pupil.copy()
+        self.prop.full_ccpupils = self.prop.unaberrated_full_ccpupils.copy()
+
+
 class AMIOverlapCalculator(OverlapCalculator):
 
     def __init__(self, positions, radii, dim = 385, wavelength = 1.55e-6, telescope_diameter = 10):

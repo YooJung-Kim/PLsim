@@ -55,7 +55,20 @@ class Scene:
         '''
         return np.exp(-2*np.pi*1j*(self.egrid_uv.x * ax + self.egrid_uv.y * ay))
     
+        # return (1/(1+c)) * (1 + c*np.exp(2*np.pi*1j/self.wavelength * (delx * ax+ dely * ay)))
+       
+    def J_disk(self, rad, ellip = 1):
+        
+        '''
+        Mutual intensities of a circular disk
+        ra : radius of the disk (radians)
+        '''
+        from scipy.special import jv
 
+        #const = np.pi*a**2/(lam*dist)**2 
+        val = 2*jv(1, 2*np.pi*rad * np.sqrt(self.egrid_uv.x**2+(self.egrid_uv.y*ellip)**2)) / (2*np.pi*rad * np.sqrt(self.egrid_uv.x**2+(self.egrid_uv.y*ellip)**2))
+        # if (val*0 != 0): val = 1
+        return val
     #     # Pre-compute for J_point optimization
     #     self._precompute_j_point_data()
     

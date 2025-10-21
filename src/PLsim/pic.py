@@ -91,16 +91,22 @@ class PhaseShifter(BaseComponent):
 
 class TriCoupler(BaseComponent):
 
-    def __init__(self, name, input_names, output_names, custom_matrix=None, custom_phase = 2*np.pi/3):
+    def __init__(self, name, input_names, output_names, custom_matrix=None, use_test_tricoupler=False):
         
         if custom_matrix is not None:
             transfer_matrix = custom_matrix
         else:
-            # Default transfer matrix for Tri-Coupler
-            phase = custom_phase
-            transfer_matrix = (1/np.sqrt(3)) * np.array([[1, np.exp(1j * phase), np.exp(1j * phase)],
-                                                         [np.exp(1j * phase), 1, np.exp(1j * phase)],
-                                                         [np.exp(1j * phase), np.exp(1j * phase), 1]], dtype=complex)
+            if use_test_tricoupler:
+                # an unitary matrix that enables coupling all the planet light into the central channel
+                transfer_matrix = np.array([[1/2, 1/np.sqrt(2), -1/2],
+                                            [1/np.sqrt(2), 0, 1/np.sqrt(2)],
+                                            [-1/2, 1/np.sqrt(2), 1/2]], dtype=complex)
+            else:
+                # Default transfer matrix for Tri-Coupler
+                phase = 2*np.pi/3
+                transfer_matrix = (1/np.sqrt(3)) * np.array([[1, np.exp(1j * phase), np.exp(1j * phase)],
+                                                            [np.exp(1j * phase), 1, np.exp(1j * phase)],
+                                                            [np.exp(1j * phase), np.exp(1j * phase), 1]], dtype=complex)
 
         super().__init__(name, input_names, output_names, transfer_matrix)
 
