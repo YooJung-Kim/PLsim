@@ -4,7 +4,7 @@ PLsim is a python package for simulating photonic lantern (+ photonic integrated
 
 * For numerical simulation studies on using photonic lanterns for spectroastrometric measurements, please refer to [Kim et al. JATIS 10, 045001](https://ui.adsabs.harvard.edu/abs/2024JATIS..10d5001K/abstract).
 
-* For laboratory spectral characterizations of standard 3-port photonic lanterns, please refer to [Kim et al. JATIS 10, 045004](https://ui.adsabs.harvard.edu/abs/2024JATIS..10d5004K/abstract).
+* For laboratory spectral characterizations of standard 3-port photonic lanterns, please refer to [Kim et al. JATIS 10, 045004](https://ui.adsabs.harvard.edu/abs/2024JATIS..10d5004K/abstract). PLsim relies on the mathematical description of PL models defined in this paper; please cite this reference if you use PLsim for your research.
 
 The codes for photonic integrated circuit are currently under development for open-use!
 
