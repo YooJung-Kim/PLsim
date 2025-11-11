@@ -188,7 +188,17 @@ class PLprop:
         # self.ccpupils = np.array(self.ccpupils)
         self.full_ccpupils = np.array(self.full_ccpupils)
         # self.ccnames = np.array(self.ccnames)
-        print('Cross-correlated pupil plane LP modes stored in self.full_ccpupils')
+        # print('Cross-correlated pupil plane LP modes stored in self.full_ccpupils')
+
+    def prepare_zernikes(self, upto = 12):
+        xa = np.linspace(-1, 1, self.dim)
+        xg, yg = np.meshgrid(xa, xa)
+
+        self.zernike_maps = []
+        for i in range(2, upto+2):
+            phase_map = zk.Zj_cart(i)(xg, yg)
+            self.zernike_maps.append(phase_map)
+        # print('Zernike phase maps up to j=%d stored in self.zernike_maps' % (upto+2))
 
 
 def modestring(mode):

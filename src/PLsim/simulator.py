@@ -293,9 +293,24 @@ class PLOverlapCalculator(OverlapCalculator):
 
         super().__init__(dim=dim, telescope_diameter=telescope_diameter, wavelength=wavelength)
 
+    def aberrate_zernike(self, amplitudes):
+        """
+        Apply Zernike aberrations.
+
+        Parameters:
+        ----------
+        amplitudes : list or ndarray
+            List of Zernike amplitudes to apply.
+        """
+        assert len(amplitudes) == len(self.prop.zernike_maps), "Length of amplitudes must match number of Zernike modes prepared."
+        phase_screen = np.zeros(self.prop.dim * self.prop.dim)
+        for index, amplitude in enumerate(amplitudes):
+            phase_screen += amplitude * self.prop.zernike_maps[index].flatten()
+        
+        self.aberrate(phase_screen)
 
     def aberrate(self, phase_screen):
-
+        
         self.prop.u0s_pupil = np.array([self.prop.unaberrated_u0s_pupil[i] * np.exp(1j * phase_screen) for i in range(len(self.prop.unaberrated_u0s_pupil))])
         self.prop.calculate_ccpupil_bases()
     

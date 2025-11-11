@@ -10,15 +10,20 @@ The codes for photonic integrated circuit are currently under development for op
 
 ## Installation
 
+`PLsim` uses [`lightbeam`](https://github.com/jw-lin/lightbeam) for calculation of LP modes.
 ```bash
-git clone https://github.com/YooJung-Kim/PLsim.git
-cd PLsim
-pip install -e .
+pip install git+https://github.com/jw-lin/lightbeam.git
+```
+
+Then install `PLsim`.
+
+```bash
+pip install git+https://github.com/YooJung-Kim/PLsim.git
 ```
 
 ## Tutorials
 
-Please see [tutorials.ipynb](./tutorials.ipynb) for detailed examples and usage instructions.
+Please see [tutorials.ipynb](./tutorials/tutorials.ipynb) for detailed examples and usage instructions.
 
 * For actual photonic lantern data reduction, please check out the package [PLred](https://github.com/YooJung-Kim/PLred).
 
