@@ -96,7 +96,23 @@ class Device:
         else:
             raise ValueError("No PIC device to update.")
     
-    def calculate_output_intensities(self, overlaps):
+    def calculate_output_intensities(self, overlaps, weights = None):
+        '''
+        Calculate output intensities for given overlaps and optional weights (for simulating extended objects of arbitrary shape).
+
+        Parameters:
+        ----------
+        overlaps : ndarray
+            Overlap matrices computed from OverlapCalculator. can be 1D, 2D, or 3D array (the last dimension is the number of lantern input ports^2)
+        weights : ndarray, optional
+            Weights when overlaps are in grids and the user wants to simulate extended objects as weighted sum of point sources.
+            The first dimension should be n_wavelengths, and the second and third dimensions should match the first two dimensions of overlaps.
+        Returns:
+        -------
+        ndarray
+            Output intensities. If weights are not provided, the shape will be (n_wavelengths, n_overlaps, n_ports).
+            If weights are provided, the shape will be (n_wavelengths, n_ports).
+        '''
 
         if self._has_pic:
             
@@ -115,8 +131,15 @@ class Device:
                 output_intens = np.array([pl.calculate_total_output_intensity(pic_matrix, mutual_inten[np.ix_(self.selected_ports, self.selected_ports)]) for mutual_inten in mutual_intens])
 
                 spectra.append(output_intens)
+            
+            spectra = np.array(spectra) 
 
-            return np.array(spectra)
+            if weights is None:
+                return spectra
+            else:
+                reshaped_weights = weights.reshape((weights.shape[0], -1))
+                weighted_spectra = np.sum(spectra * reshaped_weights[:,:,None], axis=1)
+                return weighted_spectra
 
         else:
 
@@ -131,10 +154,19 @@ class Device:
                 spectra.append(intens)
             spectra = np.array(spectra) #.reshape(len(self.wavelengths), *overlaps.shape[:2], -1)
 
-            return spectra
-        
+            # outputs are in (n_wav, n_overlaps, n_ports)
+
+            if weights is None:
+                return spectra
+            else:
+                reshaped_weights = weights.reshape((weights.shape[0], -1))
+                weighted_spectra = np.sum(spectra * reshaped_weights[:,:,None], axis=1)
+                return weighted_spectra
 
 class OverlapCalculator:
+    # Overlap calculator calculates cross-correlation of pupil functions weighted by scene mutual intensities.
+    # not only PLPMs, but this applies to any apertures; e.g., pupil-remapping aperture masking interferometry.
+    # thus this is defined generically here.
 
     def __init__(self, dim = 385, telescope_diameter = 10, wavelength = 1.55e-6):
         
@@ -245,6 +277,7 @@ class OverlapCalculator:
 
 
 class PLOverlapCalculator(OverlapCalculator):
+    # this is specific to photonic lanterns, which use PLprop
 
     def __init__(self, dim = 385, telescope_diameter = 10, wavelength = 1.55e-6, focal_plane_resolution = 0.5e-6,
                  nclad = 1.444, njack = 1.444 - 5.5e-3, rclad = 10e-6,
@@ -320,6 +353,7 @@ class PLOverlapCalculator(OverlapCalculator):
 
 
 class AMIOverlapCalculator(OverlapCalculator):
+    # this is specific to aperture masking interferometry, which uses AMIprop
 
     def __init__(self, positions, radii, dim = 385, wavelength = 1.55e-6, telescope_diameter = 10):
         """
@@ -344,107 +378,4 @@ class AMIOverlapCalculator(OverlapCalculator):
 
         super().__init__(dim=dim, telescope_diameter=telescope_diameter, wavelength=wavelength)
 
-
-
-    # def compute_overlap(self, ax, ay):
-    #     """
-    #     Compute the overlap between the scene and the lantern modes at given angular coordinates.
-
-    #     Parameters:
-    #     ----------
-    #     ax : float
-    #         Angular coordinate in radians (x-axis)
-    #     ay : float
-    #         Angular coordinate in radians (y-axis)
-
-    #     Returns:
-    #     -------
-    #     ndarray
-    #         Overlap matrix for the given angular coordinates.
-    #     """
-    #     J = self.scene.J_point(ax, ay)
-    #     return self.plprop.full_ccpupils @ J
-
-    # def compute_overlap_grid_x(self, xmax, ngrid):
-    #     """
-    #     Compute the overlap grid for a given x-coordinate range and number of grid points.
-
-    #     Parameters:
-    #     ----------
-    #     xmax : float
-    #         Maximum x-coordinate in radians
-    #     ngrid : int
-    #         Number of grid points
-
-    #     Returns:
-    #     -------
-    #     ndarray
-    #         Overlap grid for the given x-coordinate range and number of grid points.
-    #     """
-    #     ax_grid = np.linspace(-xmax/2, xmax/2, ngrid)
-    #     ay = 0.0
-    #     overlaps = [self.compute_overlap(ax, ay) for ax in ax_grid]
-    #     overlaps = np.array(overlaps).reshape(ngrid, -1)
-    #     return overlaps
-    
-    # def compute_overlap_grid_y(self, ymax, ngrid):
-    #     """
-    #     Compute the overlap grid for a given y-coordinate range and number of grid points.
-
-    #     Parameters:
-    #     ----------
-    #     ymax : float
-    #         Maximum y-coordinate in radians
-    #     ngrid : int
-    #         Number of grid points
-
-    #     Returns:
-    #     -------
-    #     ndarray
-    #         Overlap grid for the given y-coordinate range and number of grid points.
-    #     """
-    #     ax = 0.0
-    #     ay_grid = np.linspace(-ymax/2, ymax/2, ngrid)
-    #     overlaps = [self.compute_overlap(ax, ay) for ay in ay_grid]
-    #     overlaps = np.array(overlaps).reshape(ngrid, -1)
-    #     return overlaps
-    
-    # def compute_overlap_grid_2d(self, fov, ngrid):
-    #     """
-    #     Compute the overlap grid for a given field of view and number of grid points.
-
-    #     Parameters:
-    #     ----------
-    #     fov : float
-    #         Field of view in radians
-    #     ngrid : int
-    #         Number of grid points
-
-    #     Returns:
-    #     -------
-    #     ndarray
-    #         Overlap grid for the given field of view and number of grid points.
-    #     """
-
-    #     ax_grid = np.linspace(-fov/2, fov/2, ngrid)
-    #     ay_grid = np.linspace(-fov/2, fov/2, ngrid)
-
-    #     axs, ays = np.meshgrid(ax_grid, ay_grid)
-
-    #     overlaps = [self.compute_overlap(ax, ay) for ax, ay in zip(axs.ravel(), ays.ravel())]
-    #     overlaps = np.array(overlaps).reshape(ngrid, ngrid, -1)
-
-    #     self.xs = axs
-    #     self.ys = ays
-    #     self.overlaps = overlaps
-
-    #     return overlaps
-
-
-# class BaseSimulator:
-
-#     def __init__(self, 
-#                  device: Device,
-#                  overlap_matrices,
-#                  ):
 
