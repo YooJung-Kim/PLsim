@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - main  # Change this to 'master' if your default branch is master
-
+    paths:
+          - 'docs/**'        # Trigger if docs change
+          - 'src/PLsim/**'       # Trigger if code changes
+          - '.github/workflows/deploy_docs.yaml' 
+          
 # This grants the action permission to upload to GitHub Pages
 permissions:
   contents: write
