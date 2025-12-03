@@ -1,5 +1,5 @@
 API Reference
 =============
 
-.. automodapi:: src
+.. automodapi:: PLsim
    :no-heading:
