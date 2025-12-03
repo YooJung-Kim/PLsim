@@ -1,3 +1,5 @@
+![Docs](https://github.com/YooJung-Kim/PLsim/actions/workflows/deploy_docs.yaml/badge.svg)
+
 # PLsim
 
 PLsim is a python package for simulating photonic lantern (+ photonic integrated circuit) observables for astronomical scenes.
