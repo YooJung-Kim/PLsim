@@ -12,6 +12,7 @@ Welcome to PLsim's documentation!
 
    tutorials/tutorials
 
+   api/index
 
 
 .. Indices and tables
