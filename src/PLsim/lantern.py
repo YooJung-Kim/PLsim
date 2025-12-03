@@ -12,6 +12,7 @@ from scipy.signal import fftconvolve
 from scipy.stats import unitary_group
 import scipy.linalg
 
+# TODO: make general prop class that can support arbitrary mode profiles
 class PLprop:
     '''
     Compute LP modes, focal and pupil planes, and cross-correlations

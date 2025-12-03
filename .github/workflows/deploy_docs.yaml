@@ -1,0 +1,45 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches:
+      - main  # Change this to 'master' if your default branch is master
+
+# This grants the action permission to upload to GitHub Pages
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # CRITICAL: Install Pandoc for nbsphinx to convert notebooks
+      - name: Install Pandoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+
+      # Install your package and doc dependencies
+      - name: Install Dependencies
+        run: |
+          pip install sphinx sphinx-rtd-theme nbsphinx numpydoc sphinx-automodapi
+          pip install .  # Installs PLsim
+
+      - name: Build HTML
+        run: |
+          cd docs
+          make html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/build/html
