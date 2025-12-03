@@ -1,0 +1,691 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulating photonic lantern observables &mdash; PLsim 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Welcome to PLsim’s documentation!" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PLsim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Simulating photonic lantern observables</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#1.-Simulate-PL-response-to-any-astronomical-scene">1. Simulate PL response to any astronomical scene</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#Example-1:-simulate-point-source-response">Example 1: simulate point source response</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Example-2:-simulate-coupling-maps">Example 2: simulate coupling maps</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Example-3:-simulate-an-extended-star">Example 3: simulate an extended star</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#Example-4:-simulate-complex-scenes">Example 4: simulate complex scenes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#2.-Change-the-lantern-properties---use-a-different-transfer-matrix">2. Change the lantern properties - use a different transfer matrix</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#3.-Simulate-lantern-outputs-through-atmosphere">3. Simulate lantern outputs through atmosphere</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PLsim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Simulating photonic lantern observables</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/tutorials.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Simulating-photonic-lantern-observables">
+<h1>Simulating photonic lantern observables<a class="headerlink" href="#Simulating-photonic-lantern-observables" title="Link to this heading"></a></h1>
+<p>This tutorial is on how to simulate photonic lantern outputs for given astronomical scene.</p>
+<p>The lantern observable simulation consists of two parts: 1) focal-plane field decomposition into spatial modes and 2) projecting them on the lantern’s measurement basis, defined by transfer matrix.</p>
+<p>Mathematical framework is detailed in <a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2024JATIS..10d5004K">Kim et al. 2024c</a>.</p>
+<p>The first step is done using <code class="docutils literal notranslate"><span class="pre">sim.PLOverlapCalculator</span></code>. The second step is done by <code class="docutils literal notranslate"><span class="pre">sim.Device</span></code> as a transfer matrix as an input.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import numpy as np
+import matplotlib.pyplot as plt
+from PLsim import simulator as sim
+from PLsim import lantern as l
+from PLsim import scene as s
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">PLOverlapCalculator</span></code> class calculates the spatial modes of the multimode input of the lantern and decomposes focal-plane light in this mode basis. One needs to input the properties of the beam (unobstructed circular aperture is assumed) and the lantern’s multimode geometry and refractive indices (LP modes are assumed, with the geometry of circular step-index fiber).</p>
+<p>For the default refractive index settings, about 6 um core radius gives 3-moded lantern, 10 um gives 6-moded lantern, and 16.5 um gives 19-moded lantern.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># let&#39;s simulate 3-port lantern with focal ratio of 5.3
+oc = sim.PLOverlapCalculator(dim = 385, # defines the resolution of the grid. use odd numbers.
+                             telescope_diameter = 10, # in meters
+                             wavelength = 1.55e-6, # in meters
+                             nclad = 1.444, # lantern core refractive index
+                             njack = 1.444 - 5.5e-3, # lantern cladding refractive index
+                             rclad = 6e-6, # lantern core radius in meters,
+                             focal_length = 53, # focal length in meters. if not provided,
+                             # it searches for the focal length that gives the best coupling efficiency.
+                             )
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Available modes:  [(0, 1, &#39;cos&#39;), (1, 1, &#39;cos&#39;), (1, 1, &#39;sin&#39;)]
+Calculated k0, V, modes
+LP modes stored in self.u0s
+Coupling efficiency: 0.8167813749438008
+Pupil functions calculated and stored in self.u0s_pupil
+</pre></div></div>
+</div>
+<p>Now define the lantern’s transfer matrix and the <code class="docutils literal notranslate"><span class="pre">Device</span></code> class. Let’s assume a mode-selective lantern, which has an identity matrix.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>U = np.identity(3)
+device_PL = sim.Device(lantern_matrix = U, verbose=False)
+</pre></div>
+</div>
+</div>
+<section id="1.-Simulate-PL-response-to-any-astronomical-scene">
+<h2>1. Simulate PL response to any astronomical scene<a class="headerlink" href="#1.-Simulate-PL-response-to-any-astronomical-scene" title="Link to this heading"></a></h2>
+<section id="Example-1:-simulate-point-source-response">
+<h3>Example 1: simulate point source response<a class="headerlink" href="#Example-1:-simulate-point-source-response" title="Link to this heading"></a></h3>
+<p>Simulation of point source response is done by computing overlaps using <code class="docutils literal notranslate"><span class="pre">oc.compute_overlap</span></code>.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># positions in radians
+xpos = 0
+ypos = 5e-3 / 206265 # let&#39;s consider slight misalignment in one axis by 5 mas
+
+overlap = oc.compute_overlap(xpos, ypos)
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>intens = device_PL.calculate_output_intensities(overlap)[0][0]
+plt.figure(figsize=(3,1.5))
+plt.bar(range(len(intens)), intens)
+plt.xlabel(&#39;ports&#39;)
+plt.xticks(range(len(intens)), [&#39;port 1&#39;, &#39;port 2&#39;, &#39;port 3&#39;])
+plt.ylabel(&#39;intensity (a.u.)&#39;)
+plt.title(&#39;Mode-selective lantern&#39;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_tutorials_12_0.png" src="../_images/tutorials_tutorials_12_0.png" />
+</div>
+</div>
+</section>
+<section id="Example-2:-simulate-coupling-maps">
+<h3>Example 2: simulate coupling maps<a class="headerlink" href="#Example-2:-simulate-coupling-maps" title="Link to this heading"></a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">oc.compute_overlap_grid_2d</span></code> to compute overlaps in a 2D grid</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fov = 100e-3 / 206265 # field of view in radians
+ngrid = 15 # number of grid points along one axis
+
+overlap_grid = oc.compute_overlap_grid_2d(fov, ngrid, xoffset=0, yoffset=0)
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>intens_grid = device_PL.calculate_output_intensities(overlap_grid)[0]
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fig, axs = plt.subplots(ncols=3, figsize=(6,2))
+for i in range(3):
+    axs[i].imshow((intens_grid[:,i]).reshape((ngrid, ngrid)), vmin=0, vmax=2.5e-5,
+                  extent = [-fov/2*206265e3, fov/2*206265e3, -fov/2*206265e3, fov/2*206265e3])
+    axs[i].set_title(f&#39;Port {i+1}&#39;)
+    axs[i].set_xlabel(&#39;X (mas)&#39;)
+axs[0].set_ylabel(&#39;Y (mas)&#39;)
+plt.suptitle(&#39;Mode-selective lantern&#39;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_tutorials_17_0.png" src="../_images/tutorials_tutorials_17_0.png" />
+</div>
+</div>
+</section>
+<section id="Example-3:-simulate-an-extended-star">
+<h3>Example 3: simulate an extended star<a class="headerlink" href="#Example-3:-simulate-an-extended-star" title="Link to this heading"></a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">oc.compute_overlap_disk</span></code> to compute overlaps for extended star</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># simulate an extended star, with radius of 10 mas and ellipticity of 1 (circular)
+overlap_star = oc.compute_overlap_disk(radius = 10e-3/206265, ellip=1)
+<br/></pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>intens_star = device_PL.calculate_output_intensities(overlap_star)[0][0]
+plt.figure(figsize=(3,1.5))
+plt.bar(range(len(intens_star)), intens_star)
+plt.xlabel(&#39;ports&#39;)
+plt.xticks(range(len(intens_star)), [&#39;port 1&#39;, &#39;port 2&#39;, &#39;port 3&#39;])
+plt.ylabel(&#39;intensity (a.u.)&#39;)
+plt.title(&#39;Mode-selective lantern - extended source&#39;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_tutorials_21_0.png" src="../_images/tutorials_tutorials_21_0.png" />
+</div>
+</div>
+</section>
+<section id="Example-4:-simulate-complex-scenes">
+<h3>Example 4: simulate complex scenes<a class="headerlink" href="#Example-4:-simulate-complex-scenes" title="Link to this heading"></a></h3>
+<p>With these point source and extended source overlap calculators, most astronomical scenes can be simulated (as long as they are incoherent)! Any source intensity distribution can be represented as sum of point sources’ intensities – so the grid of overlaps (<code class="docutils literal notranslate"><span class="pre">compute_overlap_grid_2d</span></code>) can be used to generate reponse to complex scenes. For simulating finite stellar sizes, <code class="docutils literal notranslate"><span class="pre">compute_overlap_disk</span></code> is useful as the grid approach would require too fine samplings.</p>
+<p>Once a grid of overlaps are calculated, for example 25x25 resolution, you can simulate any image of 25x25 resolution using that overlap grid – no need to recompute!</p>
+<p>Also tip-tilt jitter during an exposure can be simulated this way. A very long exposures, effects of random jitter would be similar to finite size star.</p>
+</section>
+</section>
+<section id="2.-Change-the-lantern-properties---use-a-different-transfer-matrix">
+<h2>2. Change the lantern properties - use a different transfer matrix<a class="headerlink" href="#2.-Change-the-lantern-properties---use-a-different-transfer-matrix" title="Link to this heading"></a></h2>
+<p>The nice thing about this structure is that once overlap is computed, one can use whatever transfer matrix to simulate the observables for different lantern transfer matrix.</p>
+<p>Let’s consider a random unitary matrix, representing a standard lantern.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from scipy.stats import unitary_group
+np.random.seed(123456)
+U_random = unitary_group.rvs(3)
+device_PL_standard = sim.Device(lantern_matrix = U_random, verbose=False)
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>intens_standard = device_PL_standard.calculate_output_intensities(overlap)[0][0]
+plt.figure(figsize=(3,1.5))
+plt.bar(range(len(intens_standard)), intens_standard)
+plt.xlabel(&#39;ports&#39;)
+plt.xticks(range(len(intens_standard)), [&#39;port 1&#39;, &#39;port 2&#39;, &#39;port 3&#39;])
+plt.ylabel(&#39;intensity (a.u.)&#39;)
+plt.title(&#39;Standard lantern&#39;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_tutorials_26_0.png" src="../_images/tutorials_tutorials_26_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>intens_standard_grid = device_PL_standard.calculate_output_intensities(overlap_grid)[0]
+
+fig, axs = plt.subplots(ncols=3, figsize=(6,2))
+for i in range(3):
+    axs[i].imshow((intens_standard_grid[:,i]).reshape((ngrid, ngrid)), vmin=0, vmax=2.5e-5,
+                  extent = [-fov/2*206265e3, fov/2*206265e3, -fov/2*206265e3, fov/2*206265e3])
+    axs[i].set_title(f&#39;Port {i+1}&#39;)
+    axs[i].set_xlabel(&#39;X (mas)&#39;)
+axs[0].set_ylabel(&#39;Y (mas)&#39;)
+plt.suptitle(&#39;Standard lantern&#39;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_tutorials_27_0.png" src="../_images/tutorials_tutorials_27_0.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>intens_standard_star = device_PL_standard.calculate_output_intensities(overlap_star)[0][0]
+plt.figure(figsize=(3,1.5))
+plt.bar(range(len(intens_standard_star)), intens_standard_star)
+plt.xlabel(&#39;ports&#39;)
+plt.xticks(range(len(intens_standard_star)), [&#39;port 1&#39;, &#39;port 2&#39;, &#39;port 3&#39;])
+plt.ylabel(&#39;intensity (a.u.)&#39;)
+plt.title(&#39;Standard lantern - extended source&#39;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_tutorials_28_0.png" src="../_images/tutorials_tutorials_28_0.png" />
+</div>
+</div>
+</section>
+<section id="3.-Simulate-lantern-outputs-through-atmosphere">
+<h2>3. Simulate lantern outputs through atmosphere<a class="headerlink" href="#3.-Simulate-lantern-outputs-through-atmosphere" title="Link to this heading"></a></h2>
+<p>A quick example of the effects of atmospheric turbulence on lantern observables.</p>
+<p>The phase aberration would change the overlaps. Calculating overlaps with aberration is done by <code class="docutils literal notranslate"><span class="pre">oc.aberrate(phase_screen)</span></code> where phase_screen is the pupil plane phase aberration map.</p>
+<p>I will use hcipy to simulate phase screens and use parameters that look similar to ExAO correction.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import hcipy as hc
+seeing = 0.05 # arcsec
+outer_scale = 40 # meter
+tau0 = 0.005 # seconds
+
+fried_parameter = hc.seeing_to_fried_parameter(seeing)
+Cn_squared = hc.Cn_squared_from_fried_parameter(fried_parameter, 500e-9) # at 500 nm
+velocity = 0.314 * fried_parameter / tau0
+
+np.random.seed(0)
+layer = hc.InfiniteAtmosphericLayer(oc.prop.pupil_grid, Cn_squared, outer_scale, velocity)
+
+phase_screen_phase = layer.phase_for(oc.prop.wavelength) # in radian
+phase_screen_opd = phase_screen_phase * (oc.prop.wavelength / (2 * np.pi)) * 1e6
+
+
+hc.imshow_field(phase_screen_opd, vmin=-np.pi, vmax=np.pi, cmap=&#39;RdBu&#39;)
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;matplotlib.image.NonUniformImage at 0x7fc091c46110&gt;
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_tutorials_30_1.png" src="../_images/tutorials_tutorials_30_1.png" />
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[88]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><br/><span></span>dt = 0.05 # cadence
+n = 10
+overlaps = []
+focal_fields =[]
+for t in np.linspace(0, n*dt, n):
+    layer.t = t
+
+    phase_screen_phase = layer.phase_for(oc.prop.wavelength)
+    focal_field=oc.prop.propagator(hc.Wavefront(hc.Field(oc.prop.wf.electric_field * np.exp(1j * phase_screen_phase), grid=oc.prop.pupil_grid), wavelength=oc.prop.wavelength))
+    focal_fields.append(focal_field)
+
+    # calculate overlaps with aberration
+    oc.aberrate(phase_screen_phase)
+    overlaps.append(oc.compute_overlap(0,0)) # point source at the center
+
+# reset aberration
+oc.unaberrate()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Cross-correlated pupil plane LP modes stored in self.full_ccpupils
+Cross-correlated pupil plane LP modes stored in self.full_ccpupils
+Cross-correlated pupil plane LP modes stored in self.full_ccpupils
+Cross-correlated pupil plane LP modes stored in self.full_ccpupils
+Cross-correlated pupil plane LP modes stored in self.full_ccpupils
+Cross-correlated pupil plane LP modes stored in self.full_ccpupils
+Cross-correlated pupil plane LP modes stored in self.full_ccpupils
+Cross-correlated pupil plane LP modes stored in self.full_ccpupils
+Cross-correlated pupil plane LP modes stored in self.full_ccpupils
+Cross-correlated pupil plane LP modes stored in self.full_ccpupils
+</pre></div></div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[89]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span># now calculate intensities with the aberration
+intens_aberrated = device_PL.calculate_output_intensities(np.array(overlaps))[0]
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[90]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from matplotlib.animation import FuncAnimation
+from IPython.display import HTML
+
+fig = plt.figure(figsize=(6,3))
+ax = fig.add_subplot(121)
+ax2 = fig.add_subplot(122)
+
+def animate(i):
+    ax.clear()
+    hc.imshow_field(focal_fields[i].intensity, ax=ax)
+    ax2.clear()
+    ax2.bar(range(3), intens_aberrated[i])
+    ax2.set_ylim([0, 3.5e-5])
+    ax2.set_xticks(range(3), [&#39;port 1&#39;, &#39;port 2&#39;, &#39;port 3&#39;])
+
+anim = FuncAnimation(fig, animate, n)
+HTML(anim.to_html5_video())
+<br/></pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[90]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<video width="600" height="300" controls autoplay loop>
+  <source type="video/mp4" src="data:video/mp4;base64,AAAAIGZ0eXBNNFYgAAACAE00ViBpc29taXNvMmF2YzEAAAAIZnJlZQAAH15tZGF0AAACrQYF//+p
+3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NCByMzEwOCAzMWUxOWY5IC0gSC4yNjQvTVBF
+Ry00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyMyAtIGh0dHA6Ly93d3cudmlkZW9sYW4u
+b3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTMgZGVibG9jaz0xOjA6MCBhbmFs
+eXNlPTB4MzoweDExMyBtZT1oZXggc3VibWU9NyBwc3k9MSBwc3lfcmQ9MS4wMDowLjAwIG1peGVk
+X3JlZj0xIG1lX3JhbmdlPTE2IGNocm9tYV9tZT0xIHRyZWxsaXM9MSA4eDhkY3Q9MSBjcW09MCBk
+ZWFkem9uZT0yMSwxMSBmYXN0X3Bza2lwPTEgY2hyb21hX3FwX29mZnNldD0tMiB0aHJlYWRzPTkg
+bG9va2FoZWFkX3RocmVhZHM9MSBzbGljZWRfdGhyZWFkcz0wIG5yPTAgZGVjaW1hdGU9MSBpbnRl
+cmxhY2VkPTAgYmx1cmF5X2NvbXBhdD0wIGNvbnN0cmFpbmVkX2ludHJhPTAgYmZyYW1lcz0zIGJf
+cHlyYW1pZD0yIGJfYWRhcHQ9MSBiX2JpYXM9MCBkaXJlY3Q9MSB3ZWlnaHRiPTEgb3Blbl9nb3A9
+MCB3ZWlnaHRwPTIga2V5aW50PTI1MCBrZXlpbnRfbWluPTUgc2NlbmVjdXQ9NDAgaW50cmFfcmVm
+cmVzaD0wIHJjX2xvb2thaGVhZD00MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTIzLjAgcWNvbXA9MC42
+MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAwAIAAABNW
+ZYiEABL//vet34FNwEDta7pXOLTLq5Q0PVH2lKZ4tkgAAAMAAAMAAFIXLvOcTEAxGI5nB6fo3sJ4
+gCq+x9jCifzu6Jk9+WQbatCEGhB+t7yh5GiMZ7KqJX+pxpF4brpeIN9B5Qieo/Ga3CQSgu6uEpfm
+DV41eP26UuZHYKFawk2UDbgcJ6GNfURaHc3Eif88p/DXIeKvC1hm2Cp2aH+0ZiFBXt5P0pH0R1+q
+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
+">
+  Your browser does not support the video tag.
+</video></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_tutorials_33_1.png" src="../_images/tutorials_tutorials_33_1.png" />
+</div>
+</div>
+<p>Now it’s basically it! Tune the core radius for higher mode count lantern, change the focal length, use other fun transfer matrices, and use the coupling maps to actually simulate more complex scenes.</p>
+<p>The structure of the code is made such that it can be easily extended to include chromaticity and simulate feeding PL outputs to a PIC (<a class="reference external" href="https://ui.adsabs.harvard.edu/abs/2024ApJ...964..113K">Kim et al. 2024a</a>). More tutorials will be added in near future!</p>
+<p>Please let me know if there are any issues or questions on this tutorial. Email: <a class="reference external" href="mailto:yjkim&#37;&#52;&#48;astro&#46;ucla&#46;edu">yjkim<span>&#64;</span>astro<span>&#46;</span>ucla<span>&#46;</span>edu</a></p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="Welcome to PLsim’s documentation!" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Yoo Jung Kim.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
