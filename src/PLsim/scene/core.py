@@ -101,64 +101,200 @@ class Scene:
             # Simple element-wise multiplication for single point
             return envelope * shifts
         
-    
+    def J_gauss(self, fwhm, ax, ay):
+        """
+        Mutual Intensity of Gaussian Source.
+        FWHM: Full-Width Half-Maximum in radians.
+        ax, ay: Angular coordinates in radians.
+        """
+        sigma = fwhm / (2 * np.sqrt(2 * np.log(2)))
+        exponent = -2 * (np.pi**2) * (sigma**2) * (self.u**2 + self.v**2)
+        envelope = np.exp(exponent)
         
-class OverlapCalculator:
+        # Reuse J_point logic for phase shifts
+        shifts = self.J_point(ax, ay)
+        
+        # Combine
+        if shifts.ndim == 2:
+            return envelope[:, np.newaxis] * shifts
+        else:
+            return envelope * shifts
+        
+# class SceneProjector:
 
-    def __init__(self, otf, scene:Scene):
+#     def __init__(self, otf, scene:Scene):
+#         self.otf = otf
+#         self.scene = scene
+    
+#     def compute_point(self, ax, ay):
+#         J = self.scene.J_point(ax, ay)  # (N_pixels,) or (N_pixels, N_points)
+        
+#         # Reshape J for broadcasting if needed
+#         if J.ndim == 1:
+#             J = J[:, np.newaxis]  # (N_pixels, 1)
+        
+#         # Compute overlap: (N_modes, N_modes, N_points)
+#         overlap = np.tensordot(self.otf.full_ccpupils, J, axes=([2], [0]))
+        
+#         return overlap  # (N_modes, N_modes, N_points)
+    
+#     def compute_point_grid(self, fov, ngrid, xoffset=0, yoffset=0):
+
+#         ax_grid = np.linspace(-fov/2, fov/2, ngrid) + xoffset
+#         ay_grid = np.linspace(-fov/2, fov/2, ngrid) + yoffset
+
+#         axs, ays = np.meshgrid(ax_grid, ay_grid)
+#         axs_flat = axs.ravel()
+#         ays_flat = ays.ravel()
+
+#         J_stack = self.scene.J_point(axs_flat, ays_flat)  # (N_pixels, N_points)
+
+#         raw_overlaps = np.tensordot(self.otf.full_ccpupils, J_stack, axes=([2], [0]))  # (N_modes, N_modes, N_points)
+
+#         overlap_grid = raw_overlaps.reshape(self.otf.nmodes, self.otf.nmodes, ngrid, ngrid)
+#         # overlap_grid = overlap_grid.transpose(2,3,0,1)  # (ngrid, ngrid, N_modes, N_modes)
+
+#         return overlap_grid # (N_modes, N_modes, ngrid, ngrid)
+    
+#     def compute_disk(self, radius, ax, ay):
+#         J = self.scene.J_disk(radius, ax, ay)  # (N_pixels,) or (N_pixels, N_points)
+        
+#         # Reshape J for broadcasting if needed
+#         if J.ndim == 1:
+#             J = J[:, np.newaxis]  # (N_pixels, 1)
+        
+#         # Compute overlap: (N_modes, N_modes, N_points)
+#         overlap = np.tensordot(self.otf.full_ccpupils, J, axes=([2], [0]))
+        
+#         return overlap  # (N_modes, N_modes, N_points)
+
+#     def compute_disk_grid(self, fov, ngrid, radius, xoffset=0, yoffset=0):
+#         """
+#         Computes the system response to a disk of specific radius scanning the grid.
+#         """
+
+#         ax_grid = np.linspace(-fov/2, fov/2, ngrid) + xoffset
+#         ay_grid = np.linspace(-fov/2, fov/2, ngrid) + yoffset
+#         axs, ays = np.meshgrid(ax_grid, ay_grid)
+
+#         axs = axs.ravel()
+#         ays = ays.ravel()
+        
+#         J_stack = self.scene.J_disk(radius, axs, ays)
+
+#         # 3. Compute Overlaps (Tensor Contraction)
+#         # (N_modes, N_modes, N_pixels) @ (N_pixels, N_points)
+#         raw_overlaps = np.tensordot(self.otf.full_ccpupils, J_stack, axes=([2], [0]))
+
+#         # 4. Reshape
+#         overlap_grid = raw_overlaps.reshape(self.otf.nmodes, self.otf.nmodes, ngrid, ngrid)
+#         return overlap_grid # (N_modes, N_modes, ngrid, ngrid)
+    
+
+class SceneProjector:
+
+    def __init__(self, otf, scene):
+        """
+        Engine that projects Scene Mutual Intensities onto the OTF Mode Basis.
+        """
         self.otf = otf
         self.scene = scene
+
+    def compute_point(self, ax, ay):
+        """Computes response for specific point source(s)."""
+        return self._compute_projection(self.scene.J_point, ax, ay)
+
+    def compute_disk(self, radius, ax, ay, ellip=1):
+        """Computes response for specific disk source(s)."""
+        # wrap the radius and ellip argument
+        generator = lambda x, y: self.scene.J_disk(radius, x, y, ellip = ellip)
+        return self._compute_projection(generator, ax, ay)
     
-    def compute_overlap(self, ax, ay):
-        J = self.scene.J_point(ax, ay)  # (N_pixels,) or (N_pixels, N_points)
+    def compute_gauss(self, fwhm, ax, ay):
+        """Computes response for specific Gaussian source(s)."""
+        # wrap the fwhm argument
+        generator = lambda x, y: self.scene.J_gauss(fwhm, x, y)
+        return self._compute_projection(generator, ax, ay)
+
+    def compute_point_grid(self, fov, ngrid, xoffset=0, yoffset=0, update_cache = True):
+        """Computes response grid for point sources (Impulse Response)."""
+        point_grid = self._compute_grid_projection(
+            self.scene.J_point, fov, ngrid, xoffset, yoffset
+        )
+        if update_cache:
+            self.point_grid = point_grid
+        return point_grid
+
+    def compute_disk_grid(self, fov, ngrid, radius, xoffset=0, yoffset=0, ellip=1, update_cache = True):
+        """Computes response grid for disk sources (Sensitivity Map)."""
+        generator = lambda x, y: self.scene.J_disk(radius, x, y, ellip=ellip)
+        disk_grid = self._compute_grid_projection(
+            generator, fov, ngrid, xoffset, yoffset
+        )
+        if update_cache:
+            self.disk_grid = disk_grid
+        return disk_grid
+
+    def compute_gauss_grid(self, fov, ngrid, fwhm, xoffset=0, yoffset=0, update_cache = True):
+        """Computes response grid for Gaussian sources."""
+        generator = lambda x, y: self.scene.J_gauss(fwhm, x, y)
+        gauss_grid = self._compute_grid_projection(
+            generator, fov, ngrid, xoffset, yoffset
+        )
+        if update_cache:
+            self.gauss_grid = gauss_grid
+        return gauss_grid
+    
+    def compute_scene_from_image(self, image, grid_type = 'point'):
         
-        # Reshape J for broadcasting if needed
+        if grid_type == 'point':
+            assert image.shape == self.point_grid.shape[2:], "Image shape must match precomputed grid shape."
+            grid = self.point_grid
+        elif grid_type == 'disk':
+            assert image.shape == self.disk_grid.shape[2:], "Image shape must match precomputed grid shape."
+            grid = self.disk_grid
+        elif grid_type == 'gauss':
+            assert image.shape == self.gauss_grid.shape[2:], "Image shape must match precomputed grid shape."
+            grid = self.gauss_grid
+        else:
+            raise ValueError("grid_type must be 'point', 'disk', or 'gauss'.")
+        
+        # Weighted sum over the spatial grid
+        # grid: (N_modes, N_modes, Ny, Nx)
+        # image: (Ny, Nx)
+        scene_response = np.tensordot(grid, image, axes=([2, 3], [0, 1]))  # (N_modes, N_modes)
+        return scene_response
+        
+    # --- Internal funcs ---
+
+    def _compute_projection(self, J_func, ax, ay):
+        """
+        Helper: Generates J from coordinates and performs contraction.
+        """
+        # 1. Call the Scene Logic 
+        J = J_func(ax, ay)  # (N_pixels,) or (N_pixels, N_points)
+        
+        # 2. Safety Reshape for single points
         if J.ndim == 1:
             J = J[:, np.newaxis]  # (N_pixels, 1)
         
-        # Compute overlap: (N_modes, N_modes, N_points)
-        overlap = np.tensordot(self.otf.full_ccpupils, J, axes=([2], [0]))
-        
-        return overlap  # (N_modes, N_modes, N_points)
-    
-    def compute_overlap_grid(self, fov, ngrid, xoffset=0, yoffset=0):
-
-        ax_grid = np.linspace(-fov/2, fov/2, ngrid) + xoffset
-        ay_grid = np.linspace(-fov/2, fov/2, ngrid) + yoffset
-
-        axs, ays = np.meshgrid(ax_grid, ay_grid)
-        axs_flat = axs.ravel()
-        ays_flat = ays.ravel()
-
-        J_stack = self.scene.J_point(axs_flat, ays_flat)  # (N_pixels, N_points)
-
-        raw_overlaps = np.tensordot(self.otf.full_ccpupils, J_stack, axes=([2], [0]))  # (N_modes, N_modes, N_points)
-
-        overlap_grid = raw_overlaps.reshape(self.otf.nmodes, self.otf.nmodes, ngrid, ngrid)
-        # overlap_grid = overlap_grid.transpose(2,3,0,1)  # (ngrid, ngrid, N_modes, N_modes)
-
-        return overlap_grid # (N_modes, N_modes, ngrid, ngrid)
-    
-    def compute_overlap_grid_disk(self, fov, ngrid, radius, xoffset=0, yoffset=0):
-        """
-        Computes the system response to a disk of specific radius scanning the grid.
-        """
-
-        ax_grid = np.linspace(-fov/2, fov/2, ngrid) + xoffset
-        ay_grid = np.linspace(-fov/2, fov/2, ngrid) + yoffset
-        axs, ays = np.meshgrid(ax_grid, ay_grid)
-
-        axs = axs.ravel()
-        ays = ays.ravel()
-        
-        J_stack = self.scene.J_disk(radius, axs, ays)
-
-        # 3. Compute Overlaps (Tensor Contraction)
+        # 3. Core Math: Tensor Contraction
         # (N_modes, N_modes, N_pixels) @ (N_pixels, N_points)
-        raw_overlaps = np.tensordot(self.otf.full_ccpupils, J_stack, axes=([2], [0]))
+        return np.tensordot(self.otf.full_ccpupils, J, axes=([2], [0]))
 
-        # 4. Reshape
-        overlap_grid = raw_overlaps.reshape(self.otf.nmodes, self.otf.nmodes, ngrid, ngrid)
-        return overlap_grid # (N_modes, N_modes, ngrid, ngrid)
-    
-
+    def _compute_grid_projection(self, J_func, fov, ngrid, xoffset, yoffset):
+        """
+        Helper: Generates coordinates, calls projection, and reshapes to grid.
+        """
+        # 1. Generate Coordinate Mesh
+        ax_vec = np.linspace(-fov/2, fov/2, ngrid) + xoffset
+        ay_vec = np.linspace(-fov/2, fov/2, ngrid) + yoffset
+        axs, ays = np.meshgrid(ax_vec, ay_vec)
+        
+        # 2. Compute Flat Projection (Reuse the logic above!)
+        # We flatten inputs: (N_grid*N_grid,)
+        raw_overlaps = self._compute_projection(J_func, axs.ravel(), ays.ravel())
+        
+        # 3. Reshape to Final Grid Dimensions
+        # Raw: (N_modes, N_modes, N_points) -> Target: (N_modes, N_modes, Ny, Nx)
+        return raw_overlaps.reshape(self.otf.nmodes, self.otf.nmodes, ngrid, ngrid)

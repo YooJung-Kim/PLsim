@@ -1,3 +1,3 @@
-from .core import Scene, OverlapCalculator
+from .core import Scene, SceneProjector
 
-__all__ = ['Scene', 'OverlapCalculator']
+__all__ = ['Scene', 'SceneProjector']
