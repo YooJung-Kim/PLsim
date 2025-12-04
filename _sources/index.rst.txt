@@ -10,7 +10,7 @@ Welcome to PLsim's documentation!
    :maxdepth: 2
    :caption: Getting started
 
-   tutorials/tutorials
+   tutorials/0_intro_to_mode_based_imaging
 
    .. api/index
 
