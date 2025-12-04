@@ -1,0 +1,532 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Introduction to mode-based imaging &mdash; PLsim 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/graphviz.css?v=4ae1632d" />
+      <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            PLsim
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">Introduction to mode-based imaging</a><ul>
+<li><a class="reference internal" href="#The-model-of-observables">The model of observables</a><ul>
+<li><a class="reference internal" href="#1.-The-mutual-coherence-function-\Gamma">1. The mutual coherence function <span class="math notranslate nohighlight">\(\Gamma\)</span></a></li>
+<li><a class="reference internal" href="#2.-The-OTF-matrix-\mathbf{K}">2. The OTF matrix <span class="math notranslate nohighlight">\(\mathbf{K}\)</span></a><ul>
+<li><a class="reference internal" href="#**-analogy-to-aperture-masking-interferometry">** analogy to aperture masking interferometry</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#3.-System's-transfer-matrix-U">3. System’s transfer matrix <span class="math notranslate nohighlight">\(U\)</span></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#Concluding-remarks">Concluding remarks</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">PLsim</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Introduction to mode-based imaging</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/0_intro_to_mode_based_imaging.ipynb.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="Introduction-to-mode-based-imaging">
+<h1>Introduction to mode-based imaging<a class="headerlink" href="#Introduction-to-mode-based-imaging" title="Link to this heading"></a></h1>
+<p><code class="docutils literal notranslate"><span class="pre">PLsim</span></code> simulates observation with a photonic lantern placed at the focal plane. The photonic lantern’s input entrance is a multimode fiber, which supports a few number of spatial modes to propagate through the device. The amplitudes coupled to these modes are coherently mixed (by a complex transfer matrix, determined by the design and construction of the lantern) to produce single-moded output amplitudes in the single-mode fibers. In essense, a photonic lantern is a mode-converter; what we
+can observe through the lantern are intensities of the single-moded beams, whose complex amplitudes correspond to the linear combination of input mode amplitudes.</p>
+<p>Generalizing it, this is a form of “spatial mode-based imaging”, or “SPADE (Spatial mode demultiplexing)”. The focal plane field is projected onto a set of spatial modes and the mode amplitudes are measured. SPADE can be implemented in other ways too, such as multi-plane light conversion (MPLC).</p>
+<p><code class="docutils literal notranslate"><span class="pre">PLsim</span></code>, althogh the name suggests this is for photonic lanterns, is a general simulation tool for mode-based imaging instruments. This notebook explains what this is.</p>
+<section id="The-model-of-observables">
+<h2>The model of observables<a class="headerlink" href="#The-model-of-observables" title="Link to this heading"></a></h2>
+<p>Basically, the lantern output intensities <span class="math notranslate nohighlight">\(I\)</span> (or any spatial-mode-based imaging instrument’s outputs) can be described by this simple equation:</p>
+<div class="math notranslate nohighlight">
+\[I=\text{diag}\big(U \left[ \int \Gamma \cdot \mathbf{K} \right] U^\dagger \big)\]</div>
+<p>where <span class="math notranslate nohighlight">\(U\)</span> is the transfer matrix of the mode-based-imaging device, <span class="math notranslate nohighlight">\(\mathbf{K}\)</span> is the optical transfer function (OTF) matrix, and <span class="math notranslate nohighlight">\(\Gamma\)</span> is the mutual coherence function. Each of these will be explained in detail throughout this notebook. <code class="docutils literal notranslate"><span class="pre">PLsim</span></code> takes a modular design to simulate these three separately.</p>
+<section id="1.-The-mutual-coherence-function-\Gamma">
+<h3>1. The mutual coherence function <span class="math notranslate nohighlight">\(\Gamma\)</span><a class="headerlink" href="#1.-The-mutual-coherence-function-\Gamma" title="Link to this heading"></a></h3>
+<p>For incoherent sources, the mutual coherence functions is nothing but the Fourier transform of the intensity distribution (image) by Van Cittert-Zernike theorem, and is defined on the <span class="math notranslate nohighlight">\(uv\)</span> plane.</p>
+<p><code class="docutils literal notranslate"><span class="pre">PLsim</span></code> has a class for computing mutual coherence functions of point sources and simple geometries (uniform disk, gaussian). Here are examples:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[48]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>import hcipy as hc
+import numpy as np
+import matplotlib.pyplot as plt
+
+from PLsim.scene import Scene
+
+# Define pupil grid
+ndim = 125
+diameter = 10
+pupil_grid = hc.make_pupil_grid(ndim, diameter)
+
+ref_wavelength = 1.55e-6
+
+scene = Scene(pupil_grid, ref_wavelength)
+</pre></div>
+</div>
+</div>
+<p>Simulate the mutual coherence function for a point source offsetted at 5 mas</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[54]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>xoffset = 5e-3/206265 # 5 mas in rad
+yoffset = 0
+
+out_mutual_coherence = scene.J_point(xoffset, yoffset)
+
+fig, axs = plt.subplots(ncols=2, figsize=(6,3))
+p1=hc.imshow_field(np.real(out_mutual_coherence), grid = scene.egrid, ax=axs[0])
+p2=hc.imshow_field(np.imag(out_mutual_coherence), grid = scene.egrid, ax=axs[1])
+plt.colorbar(p1, ax=axs[0])
+plt.colorbar(p2, ax=axs[1])
+axs[0].set_title(&#39;Real&#39;)
+axs[1].set_title(&#39;Imaginary&#39;)
+
+axs[0].set_ylabel(&#39;v (m)&#39;)
+axs[0].set_xlabel(&#39;u (m)&#39;)
+axs[1].set_xlabel(&#39;u (m)&#39;)
+fig.suptitle(&#39;Mutual Coherence Function for a Point Source at 5 mas Offset&#39;)
+fig.tight_layout()
+
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_0_intro_to_mode_based_imaging_6_0.png" src="../_images/tutorials_0_intro_to_mode_based_imaging_6_0.png" />
+</div>
+</div>
+<p>Another example at 50 mas</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[55]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>xoffset2 = 50e-3/206265 # 50 mas in rad
+yoffset2 = 0
+
+out_mutual_coherence = scene.J_point(xoffset2, yoffset2)
+
+fig, axs = plt.subplots(ncols=2, figsize=(6,3))
+p1=hc.imshow_field(np.real(out_mutual_coherence), grid = scene.egrid, ax=axs[0])
+p2=hc.imshow_field(np.imag(out_mutual_coherence), grid = scene.egrid, ax=axs[1])
+plt.colorbar(p1, ax=axs[0])
+plt.colorbar(p2, ax=axs[1])
+axs[0].set_title(&#39;Real&#39;)
+axs[1].set_title(&#39;Imaginary&#39;)
+
+axs[0].set_ylabel(&#39;v (m)&#39;)
+axs[0].set_xlabel(&#39;u (m)&#39;)
+axs[1].set_xlabel(&#39;u (m)&#39;)
+fig.suptitle(&#39;Mutual Coherence Function for a Point Source at 50 mas Offset&#39;)
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_0_intro_to_mode_based_imaging_8_0.png" src="../_images/tutorials_0_intro_to_mode_based_imaging_8_0.png" />
+</div>
+</div>
+<p>Comparing the two, larger the spatial scales, smaller the fringe scales in the mutual coherence function!</p>
+<p>Now we will move on to an explanation of how a mode-sorting instrument samples these mutual coherence functions.</p>
+</section>
+<section id="2.-The-OTF-matrix-\mathbf{K}">
+<h3>2. The OTF matrix <span class="math notranslate nohighlight">\(\mathbf{K}\)</span><a class="headerlink" href="#2.-The-OTF-matrix-\mathbf{K}" title="Link to this heading"></a></h3>
+<p>Mode-sorter’s each output complex amplitude corresponds to a specific mode at the focal plane, called the photonic lantern principal mode (PLPM; <a class="reference external" href="https://iopscience.iop.org/article/10.3847/1538-4357/ad245e">Kim et al. 2024a</a>). The physical interpretation of PLPM is that, if the input field shape is exactly matched to this mode, all the light would be routed to this specific output.</p>
+<p>The Fourier-transformed PLPM, or pupil-plane PLPM, when multiplied by the telescope’s aperture, is like an “effective aperture” or “effective pupil function”. Let us denote <span class="math notranslate nohighlight">\(j\)</span> th output fiber’s effective pupil function as <span class="math notranslate nohighlight">\(X_{p,j}\)</span>. For a lantern with <span class="math notranslate nohighlight">\(N\)</span> number of outputs, it has <span class="math notranslate nohighlight">\(N\)</span> different effective apertures.</p>
+<p>The OTF matrix <span class="math notranslate nohighlight">\(\mathbf{K}\)</span> is defined as cross-correlation of a pair of effective pupil functions seen by each mode (output). For example, for <span class="math notranslate nohighlight">\(j\)</span> th and <span class="math notranslate nohighlight">\(k\)</span> th pupil-plane modes:</p>
+<div class="math notranslate nohighlight">
+\[\mathbf{K}_{j,k}(\mathbf{b}) \equiv  \,(X_{p,j} \star X_{p,k})(\mathbf{b})\]</div>
+<p>where <span class="math notranslate nohighlight">\(\star\)</span> represents the cross-correlation.</p>
+<p>Note that, conventionally an OTF is an autocorrelation of telescope’s aperture function, and represents the spatial frequency sampled by such an aperture. This OTF matrix is a generalized version of it — it is an <span class="math notranslate nohighlight">\(N\times N\)</span> matrix encoding how each pair of modes samples spatial frequencies. The mode-sorting system therefore probes the mutual coherence function through a set of weighted spatial-frequency filters, providing access to interferometric information.</p>
+<p><code class="docutils literal notranslate"><span class="pre">PLsim</span></code> has a class for computing the OTF matrix, under the <code class="docutils literal notranslate"><span class="pre">otf</span></code> module. Here I show an example for a 3-moded fiber-based mode-sorting system (i.e., 3-port photonic lantern).</p>
+<p><code class="docutils literal notranslate"><span class="pre">OTF.from_fiber_params()</span></code> computes LP modes from the user-provided fiber modes.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from PLsim.otf import OTF
+
+# Fiber parameters. Note these determine the number of supported modes
+ncore = 1.444
+nclad = 1.444 - 5.5e-3
+rcore = 6e-6  # 6 microns
+wavelength = 1.55e-6  # 1550 nm
+
+# Grids
+focal_plane_resolution = 0.5e-6  # 0.5 micron per pixel
+focal_length = diameter * 5 # focal ratio of 5
+
+
+focal_grid = hc.make_pupil_grid(ndim, focal_plane_resolution * ndim)
+
+# Telescope aperture (circular)
+aperture = hc.make_circular_aperture(diameter)(pupil_grid)
+
+otf = OTF.from_fiber_params(ncore, nclad, rcore, wavelength,
+                            focal_grid, pupil_grid, focal_length,
+                            aperture, optimize_focal_length = False)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Supported modes:  [&#39;LP01&#39;, &#39;LP11a&#39;, &#39;LP11b&#39;]
+Number of modes:  3
+</pre></div></div>
+</div>
+<p>Now let’s show how the focal-plane modes look like.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fig, axs = plt.subplots(ncols=3, figsize=(9,3))
+for i in range(3):
+    hc.imshow_field(otf.focal_modes[i], grid = focal_grid, ax=axs[i])
+    axs[i].set_ylabel(&#39;x (m)&#39;)
+fig.suptitle(&#39;Focal-plane modes&#39;)
+axs[0].set_ylabel(&#39;y (m)&#39;)
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_0_intro_to_mode_based_imaging_16_0.png" src="../_images/tutorials_0_intro_to_mode_based_imaging_16_0.png" />
+</div>
+</div>
+<p>These are the LP01, LP11a, and LP11b modes, the three lowest LP modes.</p>
+<p>Propagating these modes to the pupil plane and multiplying by the telescope’s aperture function, we get the effective pupil functions of each fiber.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fig, axs = plt.subplots(ncols=3, figsize=(9,3))
+for i in range(3):
+    hc.imshow_field(otf.pupil_functions[i], grid = pupil_grid, ax=axs[i])
+    axs[i].set_ylabel(&#39;x (m)&#39;)
+fig.suptitle(&#39;Pupil functions&#39;)
+axs[0].set_ylabel(&#39;y (m)&#39;)
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_0_intro_to_mode_based_imaging_19_0.png" src="../_images/tutorials_0_intro_to_mode_based_imaging_19_0.png" />
+</div>
+</div>
+<p>Do <code class="docutils literal notranslate"><span class="pre">otf.compute()</span></code> to compute the OTF matrix.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[30]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>otf.compute()
+
+fig, axs = plt.subplots(ncols=3, nrows=3, figsize=(9,9))
+for i in range(3):
+    for j in range(3):
+        hc.imshow_field(otf.full_ccpupils[i,j], grid = otf.egrid, ax=axs[i,j])
+        axs[i,j].text(0.5, 1.05, f&#39;mode {j+1}, {i+1}&#39;,
+                       size=12, ha=&#39;center&#39;, transform=axs[i,j].transAxes)
+        axs[2,j].set_xlabel(&#39;u (m)&#39;)
+    axs[i,0].set_ylabel(&#39;v (m)&#39;)
+
+fig.suptitle(&#39;OTF matrix&#39;)
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_0_intro_to_mode_based_imaging_21_0.png" src="../_images/tutorials_0_intro_to_mode_based_imaging_21_0.png" />
+</div>
+</div>
+<p>These are the spatial-frequency sampling functions! The dot product of the mutual coherence function <span class="math notranslate nohighlight">\(\Gamma\)</span> with these sampling functions are the spatial information that are actually sampled: <span class="math notranslate nohighlight">\(\int \Gamma \cdot \mathbf{K}\)</span>.</p>
+<p>In the context of the previous examples of point sources offsetted by 5 mas and 50 mas, 50 mas one had high-frequency fringes, which would be missed by these low-order sampling functions of a 3-port lantern. This means the light would not couple much into the 3-port lantern device; this makes sense, this is nearly 2 <span class="math notranslate nohighlight">\(\lambda/D\)</span>, out of field-of-view of the 3-port lantern!</p>
+<p><code class="docutils literal notranslate"><span class="pre">scene.SceneProjector</span></code> class helps with this calculation.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[63]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from PLsim.scene import SceneProjector
+
+sp = SceneProjector(otf, scene)
+
+projected = sp.compute_point(xoffset, yoffset)[:,:,0]
+projected2 = sp.compute_point(xoffset2, yoffset2)[:,:,0]
+
+fig, axs = plt.subplots(ncols=2, figsize=(6,3))
+axs[0].imshow(np.abs(projected), vmin=0, vmax=1e-7)
+axs[1].imshow(np.abs(projected2), vmin=0, vmax=1e-7)
+for ax in axs: ax.axis(&#39;off&#39;)
+axs[0].set_title(&#39;5 mas case&#39;)
+axs[1].set_title(&#39;50 mas case&#39;)
+fig.suptitle(&#39;Mutual coherence sampled by the PL (abs)&#39;)
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_0_intro_to_mode_based_imaging_24_0.png" src="../_images/tutorials_0_intro_to_mode_based_imaging_24_0.png" />
+</div>
+</div>
+<p>However, not all these elements <span class="math notranslate nohighlight">\(\int \Gamma \cdot \mathbf{K}\)</span> can be observed. The observables are described as diagonal components of these sampled matrix rotated by the transfer matrix of the mode sorting device, <span class="math notranslate nohighlight">\(U\)</span>, which describes how each spatial mode (here the LP01, LP11a, and LP11b modes) is mapped to each output.</p>
+<section id="**-analogy-to-aperture-masking-interferometry">
+<h4>** analogy to aperture masking interferometry<a class="headerlink" href="#**-analogy-to-aperture-masking-interferometry" title="Link to this heading"></a></h4>
+<p><a class="reference external" href="https://iopscience.iop.org/article/10.3847/1538-4357/ad245e">Kim et al. 2024a</a> made an analogy of these spatial frequency sampling functions with aperture masking interferometry (AMI). Here we show a brief example. <code class="docutils literal notranslate"><span class="pre">PLsim</span></code> supports AMI simulations as well, but assuming fiber-fed.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[46]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>mask_locs = [(4, 0), (-4, 0)] # two-hole aperture mask separated by 8m
+mask_radius = 1
+otf_ami = OTF.from_aperture_masks(mask_locs, mask_radius, pupil_grid)
+
+fig, axs = plt.subplots(ncols=2, figsize=(6,3))
+for i in range(2):
+    hc.imshow_field(otf_ami.pupil_functions[i], grid = pupil_grid, ax=axs[i])
+    axs[i].set_ylabel(&#39;x (m)&#39;)
+fig.suptitle(&#39;Pupil functions&#39;)
+axs[0].set_ylabel(&#39;y (m)&#39;)
+fig.tight_layout()
+plt.show()
+
+otf_ami.compute()
+
+fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(6,6))
+for i in range(2):
+    for j in range(2):
+        hc.imshow_field(otf_ami.full_ccpupils[i,j], grid = otf_ami.egrid, ax=axs[i,j])
+        axs[i,j].text(0.5, 1.05, f&#39;mode {j+1}, {i+1}&#39;,
+                       size=12, ha=&#39;center&#39;, transform=axs[i,j].transAxes)
+        axs[1,j].set_xlabel(&#39;u (m)&#39;)
+    axs[i,0].set_ylabel(&#39;v (m)&#39;)
+
+fig.suptitle(&#39;OTF matrix&#39;)
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+(2, 15625)
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_0_intro_to_mode_based_imaging_27_1.png" src="../_images/tutorials_0_intro_to_mode_based_imaging_27_1.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_0_intro_to_mode_based_imaging_27_2.png" src="../_images/tutorials_0_intro_to_mode_based_imaging_27_2.png" />
+</div>
+</div>
+<p>For the AMI, by interfering light transmitted by two different apertures, one can access the diagonal components of the OTF matrix.</p>
+</section>
+</section>
+<section id="3.-System's-transfer-matrix-U">
+<h3>3. System’s transfer matrix <span class="math notranslate nohighlight">\(U\)</span><a class="headerlink" href="#3.-System's-transfer-matrix-U" title="Link to this heading"></a></h3>
+<p><code class="docutils literal notranslate"><span class="pre">PLsim</span></code> has the <code class="docutils literal notranslate"><span class="pre">system</span></code> module, which includes useful functions to generate the system’s transfer matrix.</p>
+<p>A mode-selective photonic lantern maps each LP mode to each output, so the transfer matrix is the identity matrix. A standard lantern may have any transfer matrix determined by the design and construction, which is described by a nearly unitary matrix.</p>
+<p>The transfer matrix can be modified by feeding PL’s outputs to a photonic integrated circuit (PIC) to introduce interference between the outputs, or oversample so that off-diagonal components can be accessed.</p>
+<p>In this notebook I will show simple cases, a 3-port mode-selective lantern vs standard lantern.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[71]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from PLsim.system.lantern import generate_unitary_matrix
+mspl_matrix = np.eye(3)[np.newaxis,:,:] # first axis is wavelength; this notebook assumes monochromatic
+spl_matrix  = generate_unitary_matrix(3)[np.newaxis,:,:]
+<br/></pre></div>
+</div>
+</div>
+<p>Now the transfer matrices are generated. Define the <code class="docutils literal notranslate"><span class="pre">Device</span></code> class with these transfer matrices as inputs.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>from PLsim.system.device import Device
+
+mspl_device = Device(mspl_matrix)
+spl_device  = Device(spl_matrix)
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Device initialized with:
+  Lantern matrices: (1, 3, 3)
+  PIC matrices: None
+  Wavelengths: 1
+Device initialized with:
+  Lantern matrices: (1, 3, 3)
+  PIC matrices: None
+  Wavelengths: 1
+</pre></div></div>
+</div>
+<p>Calculate the observables</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[72]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>mspl_output = mspl_device.calculate_outputs(projected)[0]
+spl_output  = spl_device.calculate_outputs(projected)[0]
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[73]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span>fig, axs = plt.subplots(ncols=2, figsize=(5,2))
+axs[0].bar(range(3), mspl_output)
+axs[0].set_title(&#39;Mode-selective PL output&#39;)
+axs[0].set_xlabel(&#39;Output port&#39;)
+axs[0].set_ylabel(&#39;Intensity (a.u.)&#39;)
+axs[1].bar(range(3), spl_output)
+axs[1].set_title(&#39;Standard PL output&#39;)
+axs[1].set_xlabel(&#39;Output port&#39;)
+for ax in axs: ax.set_ylim([0, 4e-7])
+fig.suptitle(&#39;Outputs for 5 mas offset source&#39;)
+fig.tight_layout()
+plt.show()
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/tutorials_0_intro_to_mode_based_imaging_36_0.png" src="../_images/tutorials_0_intro_to_mode_based_imaging_36_0.png" />
+</div>
+</div>
+</section>
+</section>
+<section id="Concluding-remarks">
+<h2>Concluding remarks<a class="headerlink" href="#Concluding-remarks" title="Link to this heading"></a></h2>
+<p>This notebook shows the basic principle of mode-based imaging in astronomical interferometric context. Although only the simple cases are illustrated here, <code class="docutils literal notranslate"><span class="pre">PLsim</span></code> can efficiently simulate the observables, even for high-mode-count devices (~19), multi-wavelengths, and complex scenes, and with wavefront aberrations. The other tutorial notebooks will show more complex examples.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Yoo Jung Kim.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
