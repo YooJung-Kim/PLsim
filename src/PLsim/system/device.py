@@ -33,6 +33,7 @@ class Device:
         else:
             pic_matrix = None
             self._has_pic = False
+            self.lantern_matrix = lantern_matrix
             self.matrix = self._ensure_3d(lantern_matrix)
 
         ndim_lantern_matrix = np.array(lantern_matrix).shape
