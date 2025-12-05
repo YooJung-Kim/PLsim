@@ -125,8 +125,6 @@ class OTF:
         for (x, y) in mask_locs:
             pupil_modes.append(make_aperture_mask(x, y, mask_diameter, pupil_grid).flatten())
         
-        print(np.shape(pupil_modes))
-        
         aperture = hc.Field(np.ones((pupil_grid.shape[0])**2), grid= pupil_grid)
         
         return cls(pupil_grid, pupil_modes, aperture)

@@ -248,13 +248,13 @@ class SceneProjector:
     def compute_scene_from_image(self, image, grid_type = 'point'):
         
         if grid_type == 'point':
-            assert image.shape == self.point_grid.shape[2:], "Image shape must match precomputed grid shape."
+            # assert image.shape == self.point_grid.shape[2:], "Image shape must match precomputed grid shape."
             grid = self.point_grid
         elif grid_type == 'disk':
-            assert image.shape == self.disk_grid.shape[2:], "Image shape must match precomputed grid shape."
+            # assert image.shape == self.disk_grid.shape[2:], "Image shape must match precomputed grid shape."
             grid = self.disk_grid
         elif grid_type == 'gauss':
-            assert image.shape == self.gauss_grid.shape[2:], "Image shape must match precomputed grid shape."
+            # assert image.shape == self.gauss_grid.shape[2:], "Image shape must match precomputed grid shape."
             grid = self.gauss_grid
         else:
             raise ValueError("grid_type must be 'point', 'disk', or 'gauss'.")
@@ -262,8 +262,32 @@ class SceneProjector:
         # Weighted sum over the spatial grid
         # grid: (N_modes, N_modes, Ny, Nx)
         # image: (Ny, Nx)
-        scene_response = np.tensordot(grid, image, axes=([2, 3], [0, 1]))  # (N_modes, N_modes)
-        return scene_response
+        # scene_response = np.tensordot(grid, image, axes=([2, 3], [0, 1]))  # (N_modes, N_modes)
+        
+        # Case 1: Single Image (Y, X)
+        if image.ndim == 2:
+            if image.shape != grid.shape[-2:]:
+                raise ValueError(f"Image shape {image.shape} mismatches grid {grid.shape[-2:]}")
+            
+            # Simple contraction
+            # (M, M, Y, X) @ (Y, X) -> (M, M)
+            return np.tensordot(grid, image, axes=([-2, -1], [0, 1]))
+
+        # Case 2: Image Stack (W, Y, X)
+        elif image.ndim == 3:
+            if image.shape[1:] != grid.shape[-2:]:
+                raise ValueError(f"Image spatial dims {image.shape[1:]} mismatch grid {grid.shape[-2:]}")
+
+            # Sub-case 2A: One Grid, Many Images (Broadcasting)
+            if grid.ndim == 4:
+                # Grid:  (M, M, Y, X)
+                # Image: (W, Y, X)
+                raw = np.tensordot(grid, image, axes=([2, 3], [1, 2]))
+                
+                # Transpose to (W, M, M) to match standard format
+                return raw.transpose(2, 0, 1)        
+        
+        # return scene_response
         
     # --- Internal funcs ---
 
