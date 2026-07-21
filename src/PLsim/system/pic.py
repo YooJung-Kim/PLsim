@@ -561,6 +561,10 @@ class ActivePIC(PIC):
         
         # Copy all ports
         self.all_ports = [Port(p.name, p.index) for p in built_device.all_ports]
+
+        # Ensure port.index matches the position in the all_ports list
+        for i, p in enumerate(self.all_ports):
+            p.index = i
         
         # Copy components
         self.components = built_device.components.copy()
