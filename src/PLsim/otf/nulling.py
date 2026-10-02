@@ -157,6 +157,7 @@ def hard_null(R_star: np.ndarray, c_planet: np.ndarray, incident_power: float) -
     c_planet = np.asarray(c_planet, dtype=complex)
     N = c_planet.shape[0]
 
+    # eigen-decomposition of the stellar coherence matrix, descending order
     eigvals, eigvecs = np.linalg.eigh(R_star)          # ascending
     eigvals = eigvals[::-1]
     eigvecs = eigvecs[:, ::-1]                          # descending, columns
@@ -165,6 +166,7 @@ def hard_null(R_star: np.ndarray, c_planet: np.ndarray, incident_power: float) -
     eta_planet = np.empty(N + 1)
     eta_star = np.empty(N + 1)
 
+    # precompute the overlaps of c_planet with the stellar eigenvectors
     overlaps = eigvecs.conj().T @ c_planet              # <u_k, c_p>, descending
     for m in range(N + 1):
         if m == N:
@@ -172,6 +174,8 @@ def hard_null(R_star: np.ndarray, c_planet: np.ndarray, incident_power: float) -
             # exact zero rather than the ~machine-epsilon projection residual
             w = np.zeros(N, dtype=complex)
         else:
+
+            # project c_planet off the m dominant stellar eigenvectors
             w = c_planet - eigvecs[:, :m] @ overlaps[:m]
         ports[m] = w
         eta_planet[m] = np.sum(np.abs(w) ** 2) / incident_power

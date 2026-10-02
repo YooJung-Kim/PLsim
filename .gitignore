@@ -211,3 +211,5 @@ examples/
 prev/
 tutorials/disk_image_generation.py
 research/
+src/PLsim/mplc/
+src/PLsim/mplc_backup_pre_perf_20260818/

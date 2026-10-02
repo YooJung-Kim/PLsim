@@ -201,11 +201,29 @@ class CoronagraphOTF:
         # B[i,p] = ψ_i*(p) · A(p) · w(p): everything except the tilt
         B = psi.conj() * (self.aperture * self._weights)[np.newaxis, :]
 
+        K = thetas.shape[0]
+        C = np.empty((K, self.nmodes), dtype=complex)
+
+        if getattr(self.pupil_grid, 'is_separated', False):
+            # Separable grid: exp(i(a·x + b·y)) = exp(i a·x)·exp(i b·y), so the
+            # (npix, k) tilt matrix never needs to be formed — only (nx, k) and
+            # (ny, k) tables. Identical result, far fewer complex exponentials.
+            x1, y1 = (np.asarray(c) for c in self.pupil_grid.separated_coords)
+            nx, ny = len(x1), len(y1)
+            Bxy = B.reshape(self.nmodes * ny, nx)                  # x varies fastest
+            for k0 in range(0, K, chunk):
+                th = thetas[k0:k0 + chunk]
+                ex = np.exp(2j * np.pi * x1[:, np.newaxis] * th[:, 0][np.newaxis, :]
+                            / self.wavelength)                     # (nx, k)
+                ey = np.exp(2j * np.pi * y1[:, np.newaxis] * th[:, 1][np.newaxis, :]
+                            / self.wavelength)                     # (ny, k)
+                T = (Bxy @ ex).reshape(self.nmodes, ny, -1)        # (nmodes, ny, k)
+                C[k0:k0 + chunk] = np.einsum('iyk,yk->ki', T, ey)
+            return C[0] if single else C
+
         px = np.asarray(self.pupil_grid.x)
         py = np.asarray(self.pupil_grid.y)
 
-        K = thetas.shape[0]
-        C = np.empty((K, self.nmodes), dtype=complex)
         for k0 in range(0, K, chunk):
             th = thetas[k0:k0 + chunk]
             tilt = np.exp(2j * np.pi * (px[:, np.newaxis] * th[:, 0][np.newaxis, :]
@@ -221,17 +239,19 @@ class CoronagraphOTF:
         lantern_offset: tuple[float, float] = (0.0, 0.0),
         n_r: int = 16,
         n_theta: int = 32,
+        chunk: int = 256,
     ) -> np.ndarray:
         """Stellar coherence matrix R★ for a uniform disk, by direct quadrature.
 
         R★ = Σ_k w_k c(θ_k) c(θ_k)† — an incoherent sum of rank-1 outer
         products (never a coherent average of amplitudes). Weights sum to 1 so
-        a disk of radius → 0 matches a unit-flux point source.
+        a disk of radius → 0 matches a unit-flux point source. ``chunk`` is
+        passed to coupling_at (lower it on large grids to bound memory).
         """
         from .nulling import disk_quadrature
 
         points, weights = disk_quadrature(radius, center=center, n_r=n_r, n_theta=n_theta)
-        C = self.coupling_at(points, lantern_offset)               # (K, nmodes)
+        C = self.coupling_at(points, lantern_offset, chunk=chunk)  # (K, nmodes)
         return (C * weights[:, np.newaxis]).T @ C.conj()
 
     def to_effective_otf(self, lantern_offset: tuple[float, float] = (0.0, 0.0)):
