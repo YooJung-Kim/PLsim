@@ -29,7 +29,7 @@ class OTF:
 
         self.nmodes = len(pupil_modes)
         self.pupil_functions = np.array(pupil_modes * aperture[None,:], dtype=complex)
-        self.unaberrated_pupil_functions = np.array(pupil_modes, dtype=complex)
+        self.unaberrated_pupil_functions = self.pupil_functions.copy()
 
         self.full_ccpupils = np.zeros((self.nmodes, self.nmodes, self.edim**2), dtype=complex)
 
